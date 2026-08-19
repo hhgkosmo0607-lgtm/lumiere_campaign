@@ -22,6 +22,7 @@ const DEFAULTS = {
 
 const SORT_KEYS = [
   'week',
+  'date',
   'platform',
   'product',
   'adSpend',
@@ -125,7 +126,7 @@ export default function useDashboardState() {
       if (s.sortKey === key) {
         return { ...s, sortDir: s.sortDir === 'asc' ? 'desc' : 'asc' };
       }
-      const textual = key === 'week' || key === 'platform';
+      const textual = key === 'week' || key === 'date' || key === 'platform';
       return { ...s, sortKey: key, sortDir: textual ? 'asc' : 'desc' };
     });
   }, []);

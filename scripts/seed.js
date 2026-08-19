@@ -1,8 +1,8 @@
 /**
- * campaigns.json 의 24개 행을 Firestore campaigns 컬렉션에 올린다.
+ * campaigns.json 의 행을 Firestore campaigns 컬렉션에 올린다.
  * 실행:  npm run seed
  *
- * 문서 ID를 "w1_naver" 형태로 직접 지정해서, 여러 번 실행해도
+ * 문서 ID를 "2026-05-01_naver_비타민C세럼" 형태로 직접 지정해서, 여러 번 실행해도
  * 데이터가 중복으로 쌓이지 않고 덮어쓰기만 되도록 했다.
  */
 import { readFileSync } from 'fs';
@@ -39,10 +39,14 @@ const app = initializeApp({
 const db = getFirestore(app);
 
 const run = async () => {
-  for (const row of rows) {
-    const id = `w${row.week}_${row.platform}`;
+  // 날짜+채널+제품 조합이 문서마다 유일하다 (같은 날짜·채널이라도 제품이 다르면 다른 문서).
+  for (let i = 0; i < rows.length; i += 1) {
+    const row = rows[i];
+    const id = `${row.date}_${row.platform}_${row.product.replace(/\s+/g, '')}`;
     await setDoc(doc(db, 'campaigns', id), row);
-    console.log('올림:', id);
+    if ((i + 1) % 100 === 0 || i === rows.length - 1) {
+      console.log(`올리는 중: ${i + 1}/${rows.length}`);
+    }
   }
   console.log(`\n완료. 총 ${rows.length}개 문서.`);
   process.exit(0);

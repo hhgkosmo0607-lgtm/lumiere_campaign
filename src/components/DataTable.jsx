@@ -31,6 +31,7 @@ export default function DataTable({ rows, platforms, products, showRoi, sortKey,
   // 제품이 여러 개일 때만 제품 컬럼을 보여준다 (하나뿐이면 모든 행이 같은 값이라 의미가 없다).
   const showProduct = products.length > 1;
   const COLUMNS = [
+    { key: 'date', label: '날짜', align: 'left' },
     { key: 'week', label: '주차', align: 'left' },
     { key: 'platform', label: '채널', align: 'left' },
     ...(showProduct ? [PRODUCT_COLUMN] : []),
@@ -79,7 +80,8 @@ export default function DataTable({ rows, platforms, products, showRoi, sortKey,
           {pageRows.map((r) => {
             const c = platformInfo(r.platform, platforms);
             return (
-              <tr key={`${r.week}-${r.platform}-${r.product}`}>
+              <tr key={`${r.date}-${r.platform}-${r.product}`}>
+                <td>{r.date}</td>
                 <td className="num">{r.week}</td>
                 <td>
                   <span className="chip">

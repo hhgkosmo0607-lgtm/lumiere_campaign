@@ -14,6 +14,21 @@ import DataTable from './components/DataTable';
 import Controls from './components/Controls';
 import UploadPanel from './components/UploadPanel';
 
+// '읽어낸 것' 문단에서 1등·꼴찌 채널이 데이터에 따라 바뀌어도 설명이 항상 맞도록,
+// 채널별 강점·약점 한 문장을 따로 관리한다(문장 안에 채널명을 직접 박아두지 않는다).
+const PLATFORM_STRENGTH = {
+  naver: '검색은 이미 살 마음이 있는 사람이 들어오는 자리라 전환율이 다른 채널보다 뚜렷하게 높다.',
+  kakao: '카카오톡 선물하기처럼 특정 상황에 맞는 제품이 있으면 전환이 몰리는 채널이다.',
+  google: '리타겟팅 대상이 쌓일수록 좋아지는 채널이라, 주차가 지날수록 성과가 오른다.',
+  meta: '피드·릴스 노출이 많아 클릭 자체는 잘 나오는 채널이다.',
+};
+const PLATFORM_WEAKNESS = {
+  meta: '클릭은 가장 많이 나오지만 소재 피로도가 쌓이며 전환으로 이어지는 비율이 떨어진다.',
+  naver: '검색 키워드 단가가 높아 물량을 늘리면 ROAS가 금방 떨어지는 채널이다.',
+  google: '리타겟팅 모수가 쌓이기 전 초반 구간은 성과가 낮다.',
+  kakao: '목적성 구매 의도가 약해 노출 대비 전환은 낮은 편이다.',
+};
+
 export default function App() {
   const [raw, setRaw] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | live | sample | error | upload
@@ -146,7 +161,7 @@ export default function App() {
         <div>
           <h1 className="wordmark">Campaign Insight</h1>
           <p className="masthead-meta">
-            {status === 'upload' ? '업로드한 캠페인' : '샘플: 루미에르 비타민C 세럼 런칭 캠페인'} ·{' '}
+            {status === 'upload' ? '업로드한 캠페인' : '샘플: 루미에르 스킨케어 5개 제품 캠페인'} ·{' '}
             <span>{lo}–{hi}주 / 전체 {maxWeek}주</span>
           </p>
         </div>
@@ -172,9 +187,9 @@ export default function App() {
         <UploadPanel onUploaded={handleUploaded} />
 
         {uploadNotice && <p className="upload-error">{uploadNotice}</p>}
-
-        {filtered.length > 0 && <SummaryCards totals={totals} />}
       </div>
+
+      {filtered.length > 0 && <SummaryCards totals={totals} />}
 
       {filtered.length === 0 ? (
         <p className="state">선택한 조건에 해당하는 데이터가 없습니다. 조건을 넓혀보세요.</p>
@@ -254,16 +269,16 @@ export default function App() {
                 <li>
                   <span className="idx">01</span>
                   <span>
-                    <b>{best.name}</b>의 ROAS가 {Math.round(best.roas * 100)}%로 가장 높다. 검색은
-                    이미 살 마음이 있는 사람이 들어오는 자리라 전환율이 다른 채널의 3–4배다.
+                    <b>{best.name}</b>의 ROAS가 {Math.round(best.roas * 100)}%로 가장 높다.{' '}
+                    {PLATFORM_STRENGTH[best.id] ?? ''}
                   </span>
                 </li>
                 <li>
                   <span className="idx">02</span>
                   <span>
-                    <b>{worst.name}</b>는 클릭은 가장 많이 나오지만 구매로 이어지지 않는다. 이
-                    구간 광고비의 {Math.round((worst.adSpend / spendAll) * 100)}%를 쓰고 매출은{' '}
-                    {Math.round((worst.revenue / revAll) * 100)}%다.
+                    <b>{worst.name}</b>는 이 구간 광고비의{' '}
+                    {Math.round((worst.adSpend / spendAll) * 100)}%를 쓰고 매출은{' '}
+                    {Math.round((worst.revenue / revAll) * 100)}%다. {PLATFORM_WEAKNESS[worst.id] ?? ''}
                   </span>
                 </li>
                 <li>
@@ -276,8 +291,9 @@ export default function App() {
                 <li>
                   <span className="idx">04</span>
                   <span>
-                    <b>제안</b> — 메타 예산의 일부를 네이버로 옮기고, 메타는 예산을 줄이는 대신
-                    소재를 교체해 클릭 이후의 이탈을 먼저 잡는다. 구글은 상승 추세이므로 유지한다.
+                    <b>제안</b> — {worst.name} 예산의 일부를 {best.name}로 옮기고, {worst.name}는
+                    예산을 줄이는 대신 소재를 교체해 클릭 이후의 이탈을 먼저 잡는다. 구글은 상승
+                    추세이므로 유지한다.
                   </span>
                 </li>
               </ol>
@@ -299,8 +315,8 @@ export default function App() {
           <>전체 광고비 {won(rows.reduce((a, r) => a + r.adSpend, 0))}원.</>
         ) : (
           <>
-            루미에르(LUMIÈRE)는 실존하지 않는 가상 브랜드이며, 모든 수치는 채널 특성을 반영해 직접
-            설계한 가상 데이터입니다. 객단가 40,000원 가정 · 전체 광고비{' '}
+            루미에르(LUMIÈRE)는 실존하지 않는 가상 브랜드이며, 모든 수치는 채널·제품 특성을 반영해
+            직접 설계한 가상 데이터입니다. 전체 광고비{' '}
             {won(rows.reduce((a, r) => a + r.adSpend, 0))}원.
           </>
         )}

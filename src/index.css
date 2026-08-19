@@ -255,8 +255,7 @@ body {
   gap: 1px;
   background: var(--line);
   border: 1px solid var(--line);
-  border-top: none;
-  margin: 0 0 40px;
+  margin: 20px 0 40px;
 }
 .card {
   background: var(--surface);
