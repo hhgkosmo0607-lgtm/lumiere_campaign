@@ -1,0 +1,242 @@
+[
+  {
+    "week": 1,
+    "date": "2026-06-01",
+    "platform": "naver",
+    "adSpend": 500000,
+    "impressions": 62000,
+    "clicks": 1180,
+    "conversions": 53,
+    "revenue": 2120000
+  },
+  {
+    "week": 2,
+    "date": "2026-06-08",
+    "platform": "naver",
+    "adSpend": 550000,
+    "impressions": 68000,
+    "clicks": 1320,
+    "conversions": 61,
+    "revenue": 2440000
+  },
+  {
+    "week": 3,
+    "date": "2026-06-15",
+    "platform": "naver",
+    "adSpend": 600000,
+    "impressions": 74000,
+    "clicks": 1450,
+    "conversions": 68,
+    "revenue": 2720000
+  },
+  {
+    "week": 4,
+    "date": "2026-06-22",
+    "platform": "naver",
+    "adSpend": 650000,
+    "impressions": 80000,
+    "clicks": 1590,
+    "conversions": 76,
+    "revenue": 3040000
+  },
+  {
+    "week": 5,
+    "date": "2026-06-29",
+    "platform": "naver",
+    "adSpend": 700000,
+    "impressions": 86000,
+    "clicks": 1730,
+    "conversions": 84,
+    "revenue": 3360000
+  },
+  {
+    "week": 6,
+    "date": "2026-07-06",
+    "platform": "naver",
+    "adSpend": 780000,
+    "impressions": 94000,
+    "clicks": 1910,
+    "conversions": 94,
+    "revenue": 3760000
+  },
+  {
+    "week": 7,
+    "date": "2026-07-13",
+    "platform": "naver",
+    "adSpend": 850000,
+    "impressions": 101000,
+    "clicks": 2070,
+    "conversions": 103,
+    "revenue": 4120000
+  },
+  {
+    "week": 8,
+    "date": "2026-07-20",
+    "platform": "naver",
+    "adSpend": 900000,
+    "impressions": 107000,
+    "clicks": 2210,
+    "conversions": 112,
+    "revenue": 4480000
+  },
+  {
+    "week": 1,
+    "date": "2026-06-01",
+    "platform": "meta",
+    "adSpend": 800000,
+    "impressions": 90000,
+    "clicks": 3240,
+    "conversions": 42,
+    "revenue": 1680000
+  },
+  {
+    "week": 2,
+    "date": "2026-06-08",
+    "platform": "meta",
+    "adSpend": 850000,
+    "impressions": 96000,
+    "clicks": 3460,
+    "conversions": 45,
+    "revenue": 1800000
+  },
+  {
+    "week": 3,
+    "date": "2026-06-15",
+    "platform": "meta",
+    "adSpend": 900000,
+    "impressions": 102000,
+    "clicks": 3600,
+    "conversions": 46,
+    "revenue": 1840000
+  },
+  {
+    "week": 4,
+    "date": "2026-06-22",
+    "platform": "meta",
+    "adSpend": 950000,
+    "impressions": 110000,
+    "clicks": 3780,
+    "conversions": 47,
+    "revenue": 1880000
+  },
+  {
+    "week": 5,
+    "date": "2026-06-29",
+    "platform": "meta",
+    "adSpend": 1000000,
+    "impressions": 118000,
+    "clicks": 3900,
+    "conversions": 47,
+    "revenue": 1880000
+  },
+  {
+    "week": 6,
+    "date": "2026-07-06",
+    "platform": "meta",
+    "adSpend": 1050000,
+    "impressions": 126000,
+    "clicks": 4000,
+    "conversions": 46,
+    "revenue": 1840000
+  },
+  {
+    "week": 7,
+    "date": "2026-07-13",
+    "platform": "meta",
+    "adSpend": 1100000,
+    "impressions": 134000,
+    "clicks": 4080,
+    "conversions": 45,
+    "revenue": 1800000
+  },
+  {
+    "week": 8,
+    "date": "2026-07-20",
+    "platform": "meta",
+    "adSpend": 1150000,
+    "impressions": 142000,
+    "clicks": 4120,
+    "conversions": 43,
+    "revenue": 1720000
+  },
+  {
+    "week": 1,
+    "date": "2026-06-01",
+    "platform": "google",
+    "adSpend": 400000,
+    "impressions": 150000,
+    "clicks": 1200,
+    "conversions": 15,
+    "revenue": 600000
+  },
+  {
+    "week": 2,
+    "date": "2026-06-08",
+    "platform": "google",
+    "adSpend": 450000,
+    "impressions": 165000,
+    "clicks": 1380,
+    "conversions": 19,
+    "revenue": 760000
+  },
+  {
+    "week": 3,
+    "date": "2026-06-15",
+    "platform": "google",
+    "adSpend": 500000,
+    "impressions": 180000,
+    "clicks": 1550,
+    "conversions": 23,
+    "revenue": 920000
+  },
+  {
+    "week": 4,
+    "date": "2026-06-22",
+    "platform": "google",
+    "adSpend": 550000,
+    "impressions": 196000,
+    "clicks": 1740,
+    "conversions": 28,
+    "revenue": 1120000
+  },
+  {
+    "week": 5,
+    "date": "2026-06-29",
+    "platform": "google",
+    "adSpend": 600000,
+    "impressions": 212000,
+    "clicks": 1940,
+    "conversions": 33,
+    "revenue": 1320000
+  },
+  {
+    "week": 6,
+    "date": "2026-07-06",
+    "platform": "google",
+    "adSpend": 650000,
+    "impressions": 228000,
+    "clicks": 2150,
+    "conversions": 39,
+    "revenue": 1560000
+  },
+  {
+    "week": 7,
+    "date": "2026-07-13",
+    "platform": "google",
+    "adSpend": 700000,
+    "impressions": 244000,
+    "clicks": 2370,
+    "conversions": 45,
+    "revenue": 1800000
+  },
+  {
+    "week": 8,
+    "date": "2026-07-20",
+    "platform": "google",
+    "adSpend": 750000,
+    "impressions": 260000,
+    "clicks": 2600,
+    "conversions": 52,
+    "revenue": 2080000
+  }
+]
