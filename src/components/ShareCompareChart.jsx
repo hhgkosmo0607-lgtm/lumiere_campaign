@@ -24,7 +24,7 @@ export default function ShareCompareChart({ data }) {
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img"
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: 760, height: 'auto', display: 'block' }} role="img"
          aria-label="채널별 광고비 비중과 매출 비중 비교 막대 그래프">
       {ticks.map((t) => (
         <line key={t} x1={x(t)} y1={padT} x2={x(t)} y2={padT + data.length * rowH}

@@ -85,7 +85,7 @@ body {
 }
 
 .shell {
-  max-width: 1080px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 40px 24px 80px;
 }
@@ -108,14 +108,6 @@ body {
   line-height: 1;
   margin: 0 0 8px;
 }
-.masthead-meta {
-  font-size: 11px;
-  color: var(--ink-2);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin: 0;
-}
-.masthead-meta span { color: var(--ink-3); }
 
 /* ---------- 조건·요약 카드 상단 고정 ---------- */
 .sticky-top {
@@ -124,6 +116,18 @@ body {
   z-index: 10;
   background: var(--ground);
   border-bottom: 1px solid var(--line);
+}
+
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+.controls-summary {
+  font-size: 12px;
+  color: var(--ink-2);
 }
 
 /* ---------- controls ---------- */
@@ -325,23 +329,6 @@ body {
   margin: 0 0 18px;
 }
 
-/* ---------- legend ---------- */
-.legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-  font-size: 12px;
-  color: var(--ink-2);
-}
-.legend i {
-  display: inline-block;
-  width: 14px;
-  height: 2px;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
 /* ---------- table ---------- */
 .table-wrap {
   background: var(--surface);
@@ -456,19 +443,33 @@ tbody tr:hover td { background: #f7f9fa; }
   padding-top: 2px;
 }
 
-.footnote {
-  margin-top: 32px;
-  font-size: 11px;
-  color: var(--ink-3);
-  line-height: 1.7;
-}
-
 .state {
   padding: 60px 20px;
   text-align: center;
   color: var(--ink-2);
   font-size: 13px;
 }
+
+.scroll-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Sans KR', sans-serif;
+  font-size: 14px;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0;
+  cursor: pointer;
+}
+.scroll-top:hover { border-color: var(--ink-3); color: var(--ink); }
+.scroll-top:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 860px) {
@@ -552,7 +553,7 @@ const aggregate = rows => {
   };
 };
 
-const byPlatform = rows => PLATFORMS.map(p => {
+const byPlatform = (rows, platformList = PLATFORMS) => platformList.map(p => {
   const subset = rows.filter(r => r.platform === p.id);
   return { ...p, rows: subset, ...aggregate(subset) };
 }).filter(p => p.rows.length > 0);
@@ -601,6 +602,8 @@ function writeToUrl(s) {
 let state = readFromUrl();
 // ROI ↔ ROAS 전환과 표 페이지는 주소에 안 남긴다(React 쪽과 동일 — 조건이라기보다 화면 보기 방식이라).
 let metricView = 'roas';
+let controlsOpen = true;
+let showScrollTop = false;
 let page = 0;
 const PAGE_SIZE = 50;
 const setState = patch => { state = { ...state, ...patch }; page = 0; writeToUrl(state); render(); };
@@ -626,7 +629,9 @@ function sortRows(rows, key, dir) {
 /* ---------- 채널별/제품별 ROAS·ROI 막대 (범용 — CompareBarChart.jsx와 동일 로직) ---------- */
 function barChart(data, metric, breakevenValue) {
   metric = metric || 'roas'; breakevenValue = breakevenValue == null ? 1 : breakevenValue;
-  const W = 420, rowH = 52, padL = 60, padR = 54, padT = 8, axisH = 26;
+  // 왼쪽 이름표 여백은 가장 긴 이름에 맞춰 늘어난다 (긴 제품명이 잘리지 않게).
+  const maxNameLen = Math.max(0, ...data.map(d => d.name.length));
+  const W = 420, rowH = 52, padL = Math.max(60, 20 + maxNameLen * 12), padR = 54, padT = 8, axisH = 26;
   const H = padT + data.length * rowH + axisH, plotW = W - padL - padR;
 
   const values = data.map(d => d[metric]);
@@ -645,7 +650,7 @@ function barChart(data, metric, breakevenValue) {
   const ticks = [];
   for (let t = Math.ceil(minVal / tickStep) * tickStep; t <= maxVal + 1e-9; t += tickStep) ticks.push(Math.round(t * 1000) / 1000);
 
-  let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="${metric === 'roas' ? 'ROAS' : 'ROI'} 비교 막대 그래프">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:760px;height:auto;display:block" role="img" aria-label="${metric === 'roas' ? 'ROAS' : 'ROI'} 비교 막대 그래프">`;
   ticks.forEach(t => { s += `<line x1="${x(t)}" y1="${padT}" x2="${x(t)}" y2="${baseY}" stroke="#e9edf0" stroke-width="1"/>`; });
   s += `<line x1="${x(breakevenValue)}" y1="${padT-2}" x2="${x(breakevenValue)}" y2="${baseY}" stroke="${LOSS_COLOR}" stroke-width="1" stroke-dasharray="3 3"/>`;
   s += `<text x="${x(breakevenValue)}" y="${baseY+17}" fill="${LOSS_COLOR}" font-size="9" text-anchor="middle" font-family="IBM Plex Mono, monospace">손익분기 ${pct(breakevenValue,0)}%</text>`;
@@ -681,7 +686,7 @@ function shareChart(data) {
   const x = v => padL + v * plotW;
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
-  let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="채널별 광고비 비중과 매출 비중 비교 막대 그래프">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:760px;height:auto;display:block" role="img" aria-label="채널별 광고비 비중과 매출 비중 비교 막대 그래프">`;
   ticks.forEach(t => { s += `<line x1="${x(t)}" y1="${padT}" x2="${x(t)}" y2="${padT + data.length * rowH}" stroke="#e9edf0" stroke-width="1"/>`; });
 
   data.forEach((d, i) => {
@@ -699,14 +704,20 @@ function shareChart(data) {
   return s + '</svg>';
 }
 
-/* ---------- 주차별 ROAS·ROI 추이 (TrendLineChart.jsx와 동일 로직) ---------- */
-function lineChart(rows, activePlatformList, metric, breakevenValue) {
-  metric = metric || 'roas'; breakevenValue = breakevenValue == null ? 1 : breakevenValue;
+// 플랫폼별 주차 시계열 (metrics.js의 trendByPlatform과 동일 로직). 차트와 '읽어낸 것' 추세 판정 둘 다 이걸 쓴다.
+function trendByPlatform(rows, platformList) {
   const weeks = [...new Set(rows.map(r => r.week))].sort((a,b) => a-b);
-  const series = byPlatform(rows, activePlatformList).map(p => ({
+  const series = byPlatform(rows, platformList).map(p => ({
     id: p.id, name: p.name, color: p.color,
     points: weeks.map(w => { const hit = p.rows.find(r => r.week === w); return { week: w, roas: hit ? hit.roas : 0, roi: hit ? (hit.roi ?? 0) : 0 }; }),
   }));
+  return { weeks, series };
+}
+
+/* ---------- 주차별 ROAS·ROI 추이 (TrendLineChart.jsx와 동일 로직) ---------- */
+function lineChart(trendData, metric, breakevenValue) {
+  metric = metric || 'roas'; breakevenValue = breakevenValue == null ? 1 : breakevenValue;
+  const { weeks, series } = trendData;
   const W = 560, H = 250, padL = 42, padR = 58, padT = 14, padB = 30;
   const plotW = W - padL - padR, plotH = H - padT - padB;
 
@@ -729,7 +740,9 @@ function lineChart(rows, activePlatformList, metric, breakevenValue) {
   const labelStep = Math.max(1, Math.ceil(weeks.length / 13));
   const labelWeeks = weeks.filter((w, i) => i % labelStep === 0 || i === weeks.length - 1);
 
-  let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="주차별 ${metric === 'roas' ? 'ROAS' : 'ROI'} 추이 선 그래프">`;
+  const cid = 'lc' + Math.random().toString(36).slice(2, 9);
+
+  let s = `<svg id="${cid}" viewBox="0 0 ${W} ${H}" style="width:100%;max-width:980px;height:auto;display:block" role="img" aria-label="주차별 ${metric === 'roas' ? 'ROAS' : 'ROI'} 추이 선 그래프">`;
   gridVals.forEach(v => {
     s += `<line x1="${padL}" y1="${y(v)}" x2="${padL+plotW}" y2="${y(v)}" stroke="#e9edf0" stroke-width="1"/>`;
     const label = Math.abs(y(v) - y(breakevenValue)) < 10 ? '' : `${Math.round(v*100)}%`;
@@ -745,7 +758,72 @@ function lineChart(rows, activePlatformList, metric, breakevenValue) {
     const last = sr.points[sr.points.length-1];
     s += `<text x="${x(last.week)+8}" y="${y(last[metric])+3}" font-size="10" fill="${sr.color}" font-family="IBM Plex Sans KR, sans-serif" font-weight="600">${sr.name}</text>`;
   });
-  return s + '</svg>';
+
+  // 마우스를 올리면 가장 가까운 점 하나만 짚어서 정확한 수치를 보여준다
+  // (그 주차의 모든 채널을 한꺼번에 보여주면 지금 보고 싶은 점이 뭔지 헷갈린다).
+  // 요소를 미리 숨겨서 그려두고, mousemove 때 좌표만 옮긴다(전체 화면을 다시 그리지 않는다).
+  const tipW = 96, tipH = 34;
+  s += `<rect class="hoverArea" x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="transparent"/>`;
+  s += `<g class="hoverGroup" style="display:none">`;
+  s += `<circle class="hoverDot" r="4.5" stroke="#fff" stroke-width="1.5"/>`;
+  s += `<rect class="hoverTip" width="${tipW}" height="${tipH}" fill="#14181f" rx="2"/>`;
+  s += `<text class="hoverTipName" font-size="10" font-family="IBM Plex Sans KR, sans-serif" font-weight="600"></text>`;
+  s += `<text class="hoverTipValue" font-size="10" fill="#fff" font-family="IBM Plex Mono, monospace"></text>`;
+  s += `</g></svg>`;
+
+  const bindHover = () => {
+    const svg = document.getElementById(cid);
+    if (!svg) return;
+    const hoverArea = svg.querySelector('.hoverArea');
+    const hoverGroup = svg.querySelector('.hoverGroup');
+    const dot = svg.querySelector('.hoverDot');
+    const tip = svg.querySelector('.hoverTip');
+    const nameText = svg.querySelector('.hoverTipName');
+    const valueText = svg.querySelector('.hoverTipValue');
+
+    const update = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const mx = ((clientX - rect.left) / rect.width) * W;
+      const my = ((clientY - rect.top) / rect.height) * H;
+
+      let best = null, bestDist = Infinity;
+      series.forEach((sr, si) => {
+        sr.points.forEach((p, pi) => {
+          const dx = x(p.week) - mx, dy = y(p[metric]) - my;
+          const d = dx * dx + dy * dy;
+          if (d < bestDist) { bestDist = d; best = { si, pi }; }
+        });
+      });
+      if (!best) return;
+
+      const sr = series[best.si];
+      const p = sr.points[best.pi];
+      const px = x(p.week), py = y(p[metric]);
+
+      hoverGroup.style.display = '';
+      dot.setAttribute('cx', px);
+      dot.setAttribute('cy', py);
+      dot.setAttribute('fill', sr.color);
+
+      const tipX = (px + 10 + tipW > W - 4) ? px - 10 - tipW : px + 10;
+      const tipY = (py - tipH - 10 < padT) ? py + 12 : py - tipH - 10;
+      tip.setAttribute('x', tipX);
+      tip.setAttribute('y', tipY);
+      nameText.setAttribute('x', tipX + 8);
+      nameText.setAttribute('y', tipY + 14);
+      nameText.setAttribute('fill', sr.color);
+      nameText.textContent = sr.name;
+      valueText.setAttribute('x', tipX + 8);
+      valueText.setAttribute('y', tipY + 27);
+      valueText.textContent = `${p.week}주 · ${pct(p[metric], 0)}%`;
+    };
+
+    hoverArea.addEventListener('mousemove', e => update(e.clientX, e.clientY));
+    hoverArea.addEventListener('mouseleave', () => { hoverGroup.style.display = 'none'; });
+  };
+
+  return { svg: s, bindHover };
 }
 
 const PRODUCT_COLUMN = { key: 'product', label: '제품', left: true };
@@ -763,20 +841,42 @@ const OTHER_COLUMNS = [
   { key: 'roas', label: 'ROAS', tip: '광고비 대비 매출 비율 (매출 ÷ 광고비). 100%를 넘으면 광고비보다 매출이 많다는 뜻' },
 ];
 
-// '읽어낸 것' 문단에서 1등·꼴찌 채널이 데이터에 따라 바뀌어도 설명이 항상 맞도록,
-// 채널별 강점·약점 한 문장을 따로 관리한다(React App.jsx와 동일한 맵).
-const PLATFORM_STRENGTH = {
-  naver: '검색은 이미 살 마음이 있는 사람이 들어오는 자리라 전환율이 다른 채널보다 뚜렷하게 높다.',
-  kakao: '카카오톡 선물하기처럼 특정 상황에 맞는 제품이 있으면 전환이 몰리는 채널이다.',
-  google: '리타겟팅 대상이 쌓일수록 좋아지는 채널이라, 주차가 지날수록 성과가 오른다.',
-  meta: '피드·릴스 노출이 많아 클릭 자체는 잘 나오는 채널이다.',
+// '읽어낸 것' 문단은 채널 이름을 하드코딩한 문장이 아니라, 정형 진단 공식(funnelDiagnosis·
+// trendDirection, React 쪽 metrics.js와 동일)이 내놓은 분류를 문장으로 바꾸는 표다.
+const FUNNEL_TEXT = {
+  'both-high': '노출부터 구매까지 전 구간이 평균보다 강하다.',
+  'ctr-high-cvr-low': '클릭은 평균보다 잘 나오지만, 클릭 이후 전환은 평균보다 약하다 — 랜딩페이지나 타겟팅을 점검할 지점이다.',
+  'ctr-low-cvr-high': '클릭은 평균보다 적지만, 일단 들어온 사람은 확실히 산다 — 이미 살 마음이 있는 트래픽일 가능성이 높다.',
+  'both-low': '클릭도 전환도 평균을 밑돈다.',
+  'mixed': '',
 };
-const PLATFORM_WEAKNESS = {
-  meta: '클릭은 가장 많이 나오지만 소재 피로도가 쌓이며 전환으로 이어지는 비율이 떨어진다.',
-  naver: '검색 키워드 단가가 높아 물량을 늘리면 ROAS가 금방 떨어지는 채널이다.',
-  google: '리타겟팅 모수가 쌓이기 전 초반 구간은 성과가 낮다.',
-  kakao: '목적성 구매 의도가 약해 노출 대비 전환은 낮은 편이다.',
-};
+
+// 구간을 앞뒤로 나눠 평균을 비교해 추세를 판단한다. threshold(기본 10%) 밑이면 '보합'으로 본다.
+function trendDirection(points, metric, threshold = 0.1) {
+  if (points.length < 4) return { dir: 'flat', change: 0 };
+  const mid = Math.floor(points.length / 2);
+  const avg = arr => arr.reduce((a, p) => a + p[metric], 0) / arr.length;
+  const first = avg(points.slice(0, mid));
+  const second = avg(points.slice(mid));
+  if (first === 0) return { dir: 'flat', change: 0 };
+  const change = (second - first) / Math.abs(first);
+  if (change > threshold) return { dir: 'up', change };
+  if (change < -threshold) return { dir: 'down', change };
+  return { dir: 'flat', change };
+}
+
+// CTR·CVR을 전체 평균과 비교해 퍼널 어디가 강하고 약한지 네 가지로 분류한다.
+function funnelDiagnosis(ctr, cvr, avgCtr, avgCvr, margin = 0.15) {
+  const ctrHigh = avgCtr > 0 && ctr > avgCtr * (1 + margin);
+  const ctrLow = avgCtr > 0 && ctr < avgCtr * (1 - margin);
+  const cvrHigh = avgCvr > 0 && cvr > avgCvr * (1 + margin);
+  const cvrLow = avgCvr > 0 && cvr < avgCvr * (1 - margin);
+  if (ctrHigh && cvrHigh) return 'both-high';
+  if (ctrHigh && cvrLow) return 'ctr-high-cvr-low';
+  if (ctrLow && cvrHigh) return 'ctr-low-cvr-high';
+  if (ctrLow && cvrLow) return 'both-low';
+  return 'mixed';
+}
 
 const PRODUCTS = [...new Set(ALL.map(r => r.product))];
 
@@ -805,6 +905,17 @@ function render() {
   const metricLabel = metric === 'roas' ? 'ROAS' : 'ROI';
   const showProduct = PRODUCTS.length > 1;
   const showRoi = t.roi != null;
+
+  const trendData = trendByPlatform(rows, PLATFORMS);
+  // 채널 전체·제품 전체를 볼 때만 채널 간 비교가 의미 있다. 진단 공식이 데이터 기반이라 업로드한 데이터에도 그대로 맞는다.
+  const showTakeaway = state.platform === 'all' && safeProduct === 'all' && best && worst && best.id !== worst.id;
+  const trendPick = showTakeaway
+    ? trendData.series
+        .map(s => ({ ...s, ...trendDirection(s.points, metric) }))
+        .filter(s => s.dir !== 'flat')
+        .reduce((a, b) => (!a || Math.abs(b.change) > Math.abs(a.change) ? b : a), null)
+    : null;
+  const worstBelowBreakeven = showTakeaway && worst[metric] < breakevenValue;
 
   const platformOptions = ['<option value="all">전체</option>']
     .concat(PLATFORMS.map(p => `<option value="${p.id}"${p.id===state.platform?' selected':''}>${p.name}</option>`)).join('');
@@ -868,14 +979,21 @@ function render() {
       <button type="button" class="ghost" id="pageNext" ${page>=pageCount-1?'disabled':''}>다음</button>
     </div>`;
 
-  const takeaway = (state.platform === 'all' && safeProduct === 'all' && best && worst && best.id !== worst.id) ? `
+  const trendText = trendPick
+    ? `<b>${trendPick.name}</b>은 주차가 지날수록 ${trendPick.dir === 'up' ? '오르고' : '떨어지고'} 있다. ${trendPick.dir === 'up' ? '초반 숫자만 보고 껐다면 손해였을 구간이다.' : '이대로면 갈수록 효율이 나빠질 채널이다.'}`
+    : '이 구간 동안 채널별 순위가 크게 바뀌지 않았다 — 지금 배분을 유지해도 무방하다.';
+  const proposalText = `<b>제안</b> — ${worst?.name} 예산의 일부를 ${best?.name}로 옮긴다${worstBelowBreakeven ? `. ${worst.name}는 지금 손익분기 밑이라 조정이 시급하다` : ''}. ${worst?.name}는 예산을 줄이는 대신 소재를 교체해 클릭 이후의 이탈을 먼저 잡는다.`
+    + (trendPick && trendPick.dir === 'up' ? ` ${trendPick.name}은 상승 추세이므로 유지한다.` : '')
+    + (trendPick && trendPick.dir === 'down' ? ` ${trendPick.name}은 하락 추세이니 함께 점검한다.` : '');
+
+  const takeaway = showTakeaway ? `
     <section class="takeaway">
       <p class="eyebrow">읽어낸 것</p>
       <ol>
-        <li><span class="idx">01</span><span><b>${best.name}</b>의 ROAS가 ${Math.round(best.roas*100)}%로 가장 높다. ${PLATFORM_STRENGTH[best.id] || ''}</span></li>
-        <li><span class="idx">02</span><span><b>${worst.name}</b>는 이 구간 광고비의 ${Math.round(worst.adSpend/spendAll*100)}%를 쓰고 매출은 ${Math.round(worst.revenue/revAll*100)}%다. ${PLATFORM_WEAKNESS[worst.id] || ''}</span></li>
-        <li><span class="idx">03</span><span><b>구글</b>은 주차가 지날수록 올라간다. 리타겟팅 대상이 쌓이는 채널이라 초반 숫자만 보고 껐다면 손해였을 구간이다.</span></li>
-        <li><span class="idx">04</span><span><b>제안</b> — ${worst.name} 예산의 일부를 ${best.name}로 옮기고, ${worst.name}는 예산을 줄이는 대신 소재를 교체해 클릭 이후의 이탈을 먼저 잡는다. 구글은 상승 추세이므로 유지한다.</span></li>
+        <li><span class="idx">01</span><span><b>${best.name}</b>의 ROAS가 ${Math.round(best.roas*100)}%로 가장 높다. ${FUNNEL_TEXT[funnelDiagnosis(best.ctr, best.cvr, t.ctr, t.cvr)]}</span></li>
+        <li><span class="idx">02</span><span><b>${worst.name}</b>는 이 구간 광고비의 ${Math.round(worst.adSpend/spendAll*100)}%를 쓰고 매출은 ${Math.round(worst.revenue/revAll*100)}%다. ${FUNNEL_TEXT[funnelDiagnosis(worst.ctr, worst.cvr, t.ctr, t.cvr)]}</span></li>
+        <li><span class="idx">03</span><span>${trendText}</span></li>
+        <li><span class="idx">04</span><span>${proposalText}</span></li>
       </ol>
     </section>` : '';
 
@@ -912,6 +1030,8 @@ function render() {
       ${barChart(productData, metric, breakevenValue)}
     </section>`;
 
+  const trend = lineChart(trendData, metric, breakevenValue);
+
   const main = rows.length === 0 ? `<p class="state">선택한 조건에 해당하는 데이터가 없습니다. 조건을 넓혀보세요.</p>` : `
     ${metricToggle}
     <div class="panels">
@@ -922,8 +1042,8 @@ function render() {
       </section>
       <section class="panel">
         <h2>주차별 ${metricLabel} 추이</h2>
-        <p class="hint">같은 채널도 시간이 지나며 효율이 달라진다.</p>
-        ${lineChart(rows, PLATFORMS, metric, breakevenValue)}
+        <p class="hint">같은 채널도 시간이 지나며 효율이 달라진다. 점에 마우스를 올리면 정확한 수치가 뜬다.</p>
+        ${trend.svg}
       </section>
       ${productPanel}
       <section class="panel">
@@ -945,12 +1065,20 @@ function render() {
     <header class="masthead">
       <div>
         <h1 class="wordmark">Campaign Insight</h1>
-        <p class="masthead-meta">샘플: 루미에르 스킨케어 5개 제품 캠페인 · <span>${lo}–${hi}주 / 전체 ${MAX_W}주</span></p>
       </div>
     </header>
 
     <div class="sticky-top">
-      <div class="controls">
+      <div class="controls-bar">
+        <span class="controls-summary num">
+          ${state.platform === 'all' ? '전체 채널' : info(state.platform).name} ·
+          ${safeProduct === 'all' ? '전체 제품' : safeProduct} ·
+          ${lo}–${hi}주
+        </span>
+        <button type="button" class="ghost" id="toggleControls">${controlsOpen ? '조건 접기' : '조건 펼치기'}</button>
+      </div>
+
+      ${controlsOpen ? `<div class="controls">
         <div class="control">
           <label for="platform">채널</label>
           <select id="platform">${platformOptions}</select>
@@ -980,33 +1108,35 @@ function render() {
           <button type="button" class="ghost" id="copy">링크 복사</button>
           <button type="button" class="ghost" id="reset" ${isDefault?'disabled':''}>초기화</button>
         </div>
-      </div>
+      </div>` : ''}
     </div>
 
     ${cards}
 
     ${main}
 
-    <p class="footnote">
-      조회 조건은 주소에 저장됩니다. 링크를 복사해 보내면 상대방도 같은 화면을 봅니다.
-      루미에르(LUMIÈRE)는 실존하지 않는 가상 브랜드이며, 모든 수치는 채널·제품 특성을 반영해 직접
-      설계한 가상 데이터입니다. 전체 광고비 ${won(ALL.reduce((a,r)=>a+r.adSpend,0))}원.
-      이 파일은 React 앱의 화면을 그대로 옮긴 미리보기입니다.
-    </p>
-  </div>`;
+  </div>
+  <button type="button" class="scroll-top" id="scrollTopBtn" aria-label="맨 위로" style="display:${showScrollTop?'flex':'none'}">↑</button>`;
 
   bind(lo, hi);
+  trend.bindHover();
 }
 
 function bind(lo, hi) {
-  document.getElementById('platform').onchange = e => setState({ platform: e.target.value });
+  document.getElementById('toggleControls').onclick = () => { controlsOpen = !controlsOpen; render(); };
+  document.getElementById('scrollTopBtn').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const platformEl = document.getElementById('platform');
+  if (platformEl) platformEl.onchange = e => setState({ platform: e.target.value });
 
   const productEl = document.getElementById('product');
   if (productEl) productEl.onchange = e => setState({ product: e.target.value });
 
   const setRange = (a, b) => setState({ from: Math.min(a,b), to: Math.max(a,b) });
-  document.getElementById('from').oninput = e => setRange(Number(e.target.value), hi);
-  document.getElementById('to').oninput = e => setRange(lo, Number(e.target.value));
+  const fromEl = document.getElementById('from');
+  if (fromEl) fromEl.oninput = e => setRange(Number(e.target.value), hi);
+  const toEl = document.getElementById('to');
+  if (toEl) toEl.oninput = e => setRange(lo, Number(e.target.value));
 
   document.querySelectorAll('[data-preset]').forEach(btn => {
     btn.onclick = () => {
@@ -1029,9 +1159,11 @@ function bind(lo, hi) {
   const pageNext = document.getElementById('pageNext');
   if (pageNext) pageNext.onclick = () => { page += 1; render(); };
 
-  document.getElementById('reset').onclick = () => setState({ ...DEFAULTS });
+  const resetEl = document.getElementById('reset');
+  if (resetEl) resetEl.onclick = () => setState({ ...DEFAULTS });
 
-  document.getElementById('copy').onclick = async (e) => {
+  const copyEl = document.getElementById('copy');
+  if (copyEl) copyEl.onclick = async (e) => {
     try {
       await navigator.clipboard.writeText(location.href);
       e.target.textContent = '복사됨';
@@ -1041,6 +1173,18 @@ function bind(lo, hi) {
 }
 
 addEventListener('popstate', () => { state = readFromUrl(); render(); });
+addEventListener('scroll', () => {
+  // 맨 위로 스크롤을 올리면 조건을 다시 볼 확률이 높으니 자동으로 펼친다.
+  if (scrollY <= 4 && !controlsOpen) { controlsOpen = true; render(); return; }
+  // 표가 1,800건이라 스크롤이 길어서, 어느 정도 내려가면 맨 위로 버튼을 보여준다.
+  // 버튼 하나만 직접 토글한다 — 스크롤마다 전체 화면을 다시 그리면 느려진다.
+  const next = scrollY > 400;
+  if (next !== showScrollTop) {
+    showScrollTop = next;
+    const btn = document.getElementById('scrollTopBtn');
+    if (btn) btn.style.display = showScrollTop ? 'flex' : 'none';
+  }
+}, { passive: true });
 render();
 </script>
 </body>

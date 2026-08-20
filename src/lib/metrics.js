@@ -118,7 +118,38 @@ export function byProduct(rows, products) {
   }).filter((p) => p.rows.length > 0);
 }
 
+// ---------- '읽어낸 것' 진단 공식 ----------
+// 특정 채널 이름을 하드코딩하지 않고, 어떤 데이터가 들어와도 같은 기준으로 판단하기 위한
+// 정형화된 마케팅 진단 규칙 두 가지. (채널별로 미리 써둔 문장을 매칭하던 방식을 대체)
+
+// 구간을 앞뒤로 나눠 평균을 비교해 추세를 판단한다. threshold(기본 10%) 밑이면 '보합'으로 본다.
+export function trendDirection(points, metric, threshold = 0.1) {
+  if (points.length < 4) return { dir: 'flat', change: 0 };
+  const mid = Math.floor(points.length / 2);
+  const avg = (arr) => arr.reduce((a, p) => a + p[metric], 0) / arr.length;
+  const first = avg(points.slice(0, mid));
+  const second = avg(points.slice(mid));
+  if (first === 0) return { dir: 'flat', change: 0 };
+  const change = (second - first) / Math.abs(first);
+  if (change > threshold) return { dir: 'up', change };
+  if (change < -threshold) return { dir: 'down', change };
+  return { dir: 'flat', change };
+}
+
+// CTR·CVR을 전체 평균과 비교해 퍼널(노출→클릭→구매) 어디가 강하고 약한지 네 가지로 분류한다.
+// margin(기본 15%) 이상 벌어져야 '높다/낮다'로 보고, 그 안이면 평균과 비슷하다고 본다.
+export function funnelDiagnosis(ctr, cvr, avgCtr, avgCvr, margin = 0.15) {
+  const ctrHigh = avgCtr > 0 && ctr > avgCtr * (1 + margin);
+  const ctrLow = avgCtr > 0 && ctr < avgCtr * (1 - margin);
+  const cvrHigh = avgCvr > 0 && cvr > avgCvr * (1 + margin);
+  const cvrLow = avgCvr > 0 && cvr < avgCvr * (1 - margin);
+  if (ctrHigh && cvrHigh) return 'both-high';
+  if (ctrHigh && cvrLow) return 'ctr-high-cvr-low';
+  if (ctrLow && cvrHigh) return 'ctr-low-cvr-high';
+  if (ctrLow && cvrLow) return 'both-low';
+  return 'mixed';
+}
+
 // ---------- 표시 형식 ----------
 export const won = (n) => Math.round(n).toLocaleString('ko-KR');
 export const pct = (n, digits = 1) => (n * 100).toFixed(digits);
-export const manwon = (n) => `${Math.round(n / 10000).toLocaleString('ko-KR')}만원`;

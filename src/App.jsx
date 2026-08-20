@@ -3,7 +3,7 @@ import { fetchCampaigns, isConfigured } from './firebase';
 import { fetchUpload } from './lib/uploadFirestore';
 import { derivePlatforms } from './lib/platforms';
 import sampleData from './sample-data.json';
-import { withMetrics, deriveWeeks, aggregate, byPlatform, byProduct, trendByPlatform, won, PLATFORMS } from './lib/metrics';
+import { withMetrics, deriveWeeks, aggregate, byPlatform, byProduct, trendByPlatform, trendDirection, funnelDiagnosis, PLATFORMS, platformInfo } from './lib/metrics';
 import { sortRows } from './lib/sort';
 import useDashboardState from './lib/useDashboardState';
 import SummaryCards from './components/SummaryCards';
@@ -14,19 +14,15 @@ import DataTable from './components/DataTable';
 import Controls from './components/Controls';
 import UploadPanel from './components/UploadPanel';
 
-// '읽어낸 것' 문단에서 1등·꼴찌 채널이 데이터에 따라 바뀌어도 설명이 항상 맞도록,
-// 채널별 강점·약점 한 문장을 따로 관리한다(문장 안에 채널명을 직접 박아두지 않는다).
-const PLATFORM_STRENGTH = {
-  naver: '검색은 이미 살 마음이 있는 사람이 들어오는 자리라 전환율이 다른 채널보다 뚜렷하게 높다.',
-  kakao: '카카오톡 선물하기처럼 특정 상황에 맞는 제품이 있으면 전환이 몰리는 채널이다.',
-  google: '리타겟팅 대상이 쌓일수록 좋아지는 채널이라, 주차가 지날수록 성과가 오른다.',
-  meta: '피드·릴스 노출이 많아 클릭 자체는 잘 나오는 채널이다.',
-};
-const PLATFORM_WEAKNESS = {
-  meta: '클릭은 가장 많이 나오지만 소재 피로도가 쌓이며 전환으로 이어지는 비율이 떨어진다.',
-  naver: '검색 키워드 단가가 높아 물량을 늘리면 ROAS가 금방 떨어지는 채널이다.',
-  google: '리타겟팅 모수가 쌓이기 전 초반 구간은 성과가 낮다.',
-  kakao: '목적성 구매 의도가 약해 노출 대비 전환은 낮은 편이다.',
+// '읽어낸 것' 문단은 채널 이름을 하드코딩한 문장이 아니라, metrics.js의 정형 진단 공식
+// (funnelDiagnosis·trendDirection)이 내놓은 분류를 문장으로 바꾸는 표다 — 그래서 업로드한
+// 어떤 데이터가 와도, 1등·꼴찌·추세가 바뀌어도 항상 그 채널에 맞는 설명이 나온다.
+const FUNNEL_TEXT = {
+  'both-high': '노출부터 구매까지 전 구간이 평균보다 강하다.',
+  'ctr-high-cvr-low': '클릭은 평균보다 잘 나오지만, 클릭 이후 전환은 평균보다 약하다 — 랜딩페이지나 타겟팅을 점검할 지점이다.',
+  'ctr-low-cvr-high': '클릭은 평균보다 적지만, 일단 들어온 사람은 확실히 산다 — 이미 살 마음이 있는 트래픽일 가능성이 높다.',
+  'both-low': '클릭도 전환도 평균을 밑돈다.',
+  mixed: '',
 };
 
 export default function App() {
@@ -37,6 +33,20 @@ export default function App() {
   const [uploadNotice, setUploadNotice] = useState('');
   // 마진 데이터가 있을 때만 ROI로 전환할 수 있다. 없으면 항상 ROAS.
   const [metricView, setMetricView] = useState('roas');
+  // 조회 조건 영역은 스크롤해도 따라오는데, 표를 오래 보는 동안은 접어서 자리를 줄일 수 있게 한다.
+  const [controlsOpen, setControlsOpen] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      // 맨 위로 스크롤을 올리면 조건을 다시 볼 확률이 높으니 자동으로 펼친다.
+      if (window.scrollY <= 4) setControlsOpen(true);
+      // 표가 1,800건이라 스크롤이 길어서, 어느 정도 내려가면 맨 위로 버튼을 보여준다.
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const {
     platform, product, from, to, sortKey, sortDir,
@@ -151,42 +161,64 @@ export default function App() {
   const worst = sorted[sorted.length - 1];
   const spendAll = filtered.reduce((a, r) => a + r.adSpend, 0);
   const revAll = filtered.reduce((a, r) => a + r.revenue, 0);
-  // '읽어낸 것' 문단은 LUMIÈRE 데모 데이터(네이버·메타·구글 캐릭터)를 전제로 쓴 고정 텍스트라
-  // 업로드된 데이터셋에는 맞지 않는다. 데모일 때만 보여준다.
-  const showTakeaway = status !== 'upload' && safePlatform === 'all' && safeProduct === 'all' && best && worst && best.id !== worst.id;
+  // 채널 전체·제품 전체를 볼 때만 채널 간 비교가 의미 있다. 진단 공식이 데이터 기반이라
+  // 업로드한 데이터에도 그대로 맞는다 — 데모 전용이던 예전 제약은 없앴다.
+  const showTakeaway = safePlatform === 'all' && safeProduct === 'all' && best && worst && best.id !== worst.id;
+
+  // 채널별 추세 중 가장 뚜렷한(변화율이 가장 큰) 채널 하나를 찾는다. 전부 보합이면 null.
+  const trendPick = showTakeaway
+    ? trend.series
+        .map((s) => ({ ...s, ...trendDirection(s.points, metric) }))
+        .filter((s) => s.dir !== 'flat')
+        .reduce((a, b) => (!a || Math.abs(b.change) > Math.abs(a.change) ? b : a), null)
+    : null;
+  const worstBelowBreakeven = showTakeaway && worst[metric] < breakevenValue;
 
   return (
     <div className="shell">
       <header className="masthead">
         <div>
           <h1 className="wordmark">Campaign Insight</h1>
-          <p className="masthead-meta">
-            {status === 'upload' ? '업로드한 캠페인' : '샘플: 루미에르 스킨케어 5개 제품 캠페인'} ·{' '}
-            <span>{lo}–{hi}주 / 전체 {maxWeek}주</span>
-          </p>
         </div>
       </header>
 
       <div className="sticky-top">
-        <Controls
-          platforms={activePlatforms}
-          platform={safePlatform}
-          onPlatform={setPlatform}
-          products={products}
-          product={safeProduct}
-          onProduct={setProduct}
-          from={lo}
-          to={hi}
-          min={minWeek}
-          max={maxWeek}
-          onRange={setRange}
-          onReset={reset}
-          isDefault={isDefault}
-        />
+        <div className="controls-bar">
+          <span className="controls-summary num">
+            {safePlatform === 'all' ? '전체 채널' : platformInfo(safePlatform, activePlatforms).name}
+            {' · '}
+            {safeProduct === 'all' ? '전체 제품' : safeProduct}
+            {' · '}
+            {lo}–{hi}주
+          </span>
+          <button type="button" className="ghost" onClick={() => setControlsOpen((v) => !v)}>
+            {controlsOpen ? '조건 접기' : '조건 펼치기'}
+          </button>
+        </div>
 
-        <UploadPanel onUploaded={handleUploaded} />
+        {controlsOpen && (
+          <>
+            <Controls
+              platforms={activePlatforms}
+              platform={safePlatform}
+              onPlatform={setPlatform}
+              products={products}
+              product={safeProduct}
+              onProduct={setProduct}
+              from={lo}
+              to={hi}
+              min={minWeek}
+              max={maxWeek}
+              onRange={setRange}
+              onReset={reset}
+              isDefault={isDefault}
+            />
 
-        {uploadNotice && <p className="upload-error">{uploadNotice}</p>}
+            <UploadPanel onUploaded={handleUploaded} />
+
+            {uploadNotice && <p className="upload-error">{uploadNotice}</p>}
+          </>
+        )}
       </div>
 
       {filtered.length > 0 && <SummaryCards totals={totals} />}
@@ -232,7 +264,7 @@ export default function App() {
 
             <section className="panel">
               <h2>주차별 {metricLabel} 추이</h2>
-              <p className="hint">같은 채널도 시간이 지나며 효율이 달라진다.</p>
+              <p className="hint">같은 채널도 시간이 지나며 효율이 달라진다. 점에 마우스를 올리면 정확한 수치가 뜬다.</p>
               <TrendLineChart weeks={trend.weeks} series={trend.series} metric={metric} breakevenValue={breakevenValue} />
             </section>
 
@@ -270,7 +302,7 @@ export default function App() {
                   <span className="idx">01</span>
                   <span>
                     <b>{best.name}</b>의 ROAS가 {Math.round(best.roas * 100)}%로 가장 높다.{' '}
-                    {PLATFORM_STRENGTH[best.id] ?? ''}
+                    {FUNNEL_TEXT[funnelDiagnosis(best.ctr, best.cvr, totals.ctr, totals.cvr)]}
                   </span>
                 </li>
                 <li>
@@ -278,22 +310,33 @@ export default function App() {
                   <span>
                     <b>{worst.name}</b>는 이 구간 광고비의{' '}
                     {Math.round((worst.adSpend / spendAll) * 100)}%를 쓰고 매출은{' '}
-                    {Math.round((worst.revenue / revAll) * 100)}%다. {PLATFORM_WEAKNESS[worst.id] ?? ''}
+                    {Math.round((worst.revenue / revAll) * 100)}%다.{' '}
+                    {FUNNEL_TEXT[funnelDiagnosis(worst.ctr, worst.cvr, totals.ctr, totals.cvr)]}
                   </span>
                 </li>
                 <li>
                   <span className="idx">03</span>
                   <span>
-                    <b>구글</b>은 주차가 지날수록 올라간다. 리타겟팅 대상이 쌓이는 채널이라 초반
-                    숫자만 보고 껐다면 손해였을 구간이다.
+                    {trendPick ? (
+                      <>
+                        <b>{trendPick.name}</b>은 주차가 지날수록 {trendPick.dir === 'up' ? '오르고' : '떨어지고'} 있다.{' '}
+                        {trendPick.dir === 'up'
+                          ? '초반 숫자만 보고 껐다면 손해였을 구간이다.'
+                          : '이대로면 갈수록 효율이 나빠질 채널이다.'}
+                      </>
+                    ) : (
+                      '이 구간 동안 채널별 순위가 크게 바뀌지 않았다 — 지금 배분을 유지해도 무방하다.'
+                    )}
                   </span>
                 </li>
                 <li>
                   <span className="idx">04</span>
                   <span>
-                    <b>제안</b> — {worst.name} 예산의 일부를 {best.name}로 옮기고, {worst.name}는
-                    예산을 줄이는 대신 소재를 교체해 클릭 이후의 이탈을 먼저 잡는다. 구글은 상승
-                    추세이므로 유지한다.
+                    <b>제안</b> — {worst.name} 예산의 일부를 {best.name}로 옮긴다
+                    {worstBelowBreakeven ? `. ${worst.name}는 지금 손익분기 밑이라 조정이 시급하다` : ''}.{' '}
+                    {worst.name}는 예산을 줄이는 대신 소재를 교체해 클릭 이후의 이탈을 먼저 잡는다.
+                    {trendPick && trendPick.dir === 'up' && ` ${trendPick.name}은 상승 추세이므로 유지한다.`}
+                    {trendPick && trendPick.dir === 'down' && ` ${trendPick.name}은 하락 추세이니 함께 점검한다.`}
                   </span>
                 </li>
               </ol>
@@ -302,25 +345,16 @@ export default function App() {
         </>
       )}
 
-      <p className="footnote">
-        {status === 'live' && 'Firestore campaigns 컬렉션에서 불러온 데이터입니다. '}
-        {status === 'sample' &&
-          'Firebase 설정 전이라 샘플 데이터로 표시하고 있습니다. .env 파일을 채우면 Firestore에서 불러옵니다. '}
-        {status === 'error' &&
-          'Firestore 연결에 실패해 샘플 데이터로 표시하고 있습니다. 콘솔 오류를 확인하세요. '}
-        {status === 'upload' &&
-          '업로드한 데이터로 표시하고 있습니다. 이 링크를 아는 사람은 누구나 볼 수 있습니다. '}
-        조회 조건은 주소에 저장됩니다. 링크를 복사해 보내면 상대방도 같은 화면을 봅니다.{' '}
-        {status === 'upload' ? (
-          <>전체 광고비 {won(rows.reduce((a, r) => a + r.adSpend, 0))}원.</>
-        ) : (
-          <>
-            루미에르(LUMIÈRE)는 실존하지 않는 가상 브랜드이며, 모든 수치는 채널·제품 특성을 반영해
-            직접 설계한 가상 데이터입니다. 전체 광고비{' '}
-            {won(rows.reduce((a, r) => a + r.adSpend, 0))}원.
-          </>
-        )}
-      </p>
+      {showScrollTop && (
+        <button
+          type="button"
+          className="scroll-top"
+          aria-label="맨 위로"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 }

@@ -14,7 +14,10 @@ const LOSS_COLOR = '#c0392b';
 export default function CompareBarChart({ data, metric = 'roas', breakevenValue = 1 }) {
   const W = 420;
   const rowH = 52;
-  const padL = 60;
+  // 왼쪽 이름표 여백은 고정폭이 아니라 가장 긴 이름에 맞춰 늘어난다 — 채널명(2~3자)은 그대로지만
+  // "립밤 기프트세트" 같은 긴 제품명이 잘리지 않게 하기 위함.
+  const maxNameLen = Math.max(0, ...data.map((d) => d.name.length));
+  const padL = Math.max(60, 20 + maxNameLen * 12);
   const padR = 54;
   const padT = 8;
   const axisH = 26;
@@ -39,7 +42,7 @@ export default function CompareBarChart({ data, metric = 'roas', breakevenValue 
   }
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img"
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: 760, height: 'auto', display: 'block' }} role="img"
          aria-label={`${metric === 'roas' ? 'ROAS' : 'ROI'} 비교 막대 그래프`}>
       {ticks.map((t) => (
         <line key={t} x1={x(t)} y1={padT} x2={x(t)} y2={padT + data.length * rowH}

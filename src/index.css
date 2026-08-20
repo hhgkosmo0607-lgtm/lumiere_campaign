@@ -78,7 +78,7 @@ body {
 }
 
 .shell {
-  max-width: 1080px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 40px 24px 80px;
 }
@@ -101,15 +101,6 @@ body {
   line-height: 1;
   margin: 0 0 8px;
 }
-.masthead-meta {
-  font-size: 11px;
-  color: var(--ink-2);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin: 0;
-}
-.masthead-meta span { color: var(--ink-3); }
-
 /* ---------- 조건·요약 카드 상단 고정 ---------- */
 .sticky-top {
   position: sticky;
@@ -117,6 +108,18 @@ body {
   z-index: 10;
   background: var(--ground);
   border-bottom: 1px solid var(--line);
+}
+
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+.controls-summary {
+  font-size: 12px;
+  color: var(--ink-2);
 }
 
 /* ---------- controls ---------- */
@@ -319,23 +322,6 @@ body {
   margin: 0 0 18px;
 }
 
-/* ---------- legend ---------- */
-.legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-  font-size: 12px;
-  color: var(--ink-2);
-}
-.legend i {
-  display: inline-block;
-  width: 14px;
-  height: 2px;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
 /* ---------- table ---------- */
 .table-wrap {
   background: var(--surface);
@@ -450,19 +436,33 @@ tbody tr:hover td { background: #f7f9fa; }
   padding-top: 2px;
 }
 
-.footnote {
-  margin-top: 32px;
-  font-size: 11px;
-  color: var(--ink-3);
-  line-height: 1.7;
-}
-
 .state {
   padding: 60px 20px;
   text-align: center;
   color: var(--ink-2);
   font-size: 13px;
 }
+
+.scroll-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Sans KR', sans-serif;
+  font-size: 14px;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0;
+  cursor: pointer;
+}
+.scroll-top:hover { border-color: var(--ink-3); color: var(--ink); }
+.scroll-top:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* ---------- 엑셀 업로드 ---------- */
 .upload-panel {
@@ -526,6 +526,43 @@ tbody tr:hover td { background: #f7f9fa; }
   padding: 6px 0;
   border-bottom: 1px solid var(--line-soft);
 }
+
+.ghost.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+
+.match-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.match-table th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+  padding: 0 8px 8px 0;
+  border-bottom: 1px solid var(--ink);
+}
+.match-table td {
+  padding: 8px 8px 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.match-table tr:last-child td { border-bottom: none; }
+.match-table .campaign-name { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+.match-table input[type='text'] {
+  font-family: 'IBM Plex Sans KR', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 5px 9px;
+  width: 100%;
+}
+.match-table input.margin { width: 72px; }
+.match-table input.auto { border-color: var(--naver); }
+.match-table input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 860px) {

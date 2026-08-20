@@ -25,5 +25,5 @@ export async function fetchCampaigns() {
   const snap = await getDocs(collection(db, 'campaigns'));
   return snap.docs
     .map((d) => d.data())
-    .sort((a, b) => a.week - b.week || a.platform.localeCompare(b.platform));
+    .sort((a, b) => a.date.localeCompare(b.date) || a.platform.localeCompare(b.platform));
 }

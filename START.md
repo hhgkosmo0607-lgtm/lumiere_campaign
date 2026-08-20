@@ -50,7 +50,7 @@ VS Code에서 이 폴더를 열고 터미널에 `claude` 를 입력하면 시작
 
 ```bash
 npm install
-npm run seed    # 24건 업로드
+npm run seed    # 1,800건 업로드
 npm run dev     # 확인
 ```
 
@@ -129,6 +129,8 @@ GitHub에 처음 올리려고 해. 저장소는 만들었고 주소는 (주소)�
 | `CLAUDE.md` | Claude Code가 매 세션 읽는 프로젝트 규칙 |
 | `CLAUDE_CODE_가이드.md` | 명령어 설명 + 바로 쓸 수 있는 프롬프트 모음 |
 | `README.md` | Firebase 설정 · 실행 · 배포 상세 절차 |
+| `PRD.md` | 무엇을 왜/누구를 위해/어디까지 만들었는지 |
+| `사양서.md` | 데이터 구조 · 계산식 · 흐름도 |
 | `포트폴리오_설명.md` | 포트폴리오에 붙일 1페이지 |
 | `preview.html` | 설치 없이 여는 미리보기 |
 

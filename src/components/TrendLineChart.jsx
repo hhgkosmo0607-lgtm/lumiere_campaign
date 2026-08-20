@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { pct } from '../lib/metrics';
 
 /**
@@ -6,6 +7,8 @@ import { pct } from '../lib/metrics';
  * (범례를 눈으로 왕복하지 않도록).
  * metric이 'roas'면 광고비 대비 매출, 'roi'면 원가까지 뺀 진짜 수익성을 그린다.
  * ROI는 마이너스(손해)가 나올 수 있어서 축이 0 아래로도 내려간다.
+ * 마우스를 올리면 가장 가까운 점 하나만 짚어서 정확한 수치를 보여준다
+ * (그 주차의 모든 채널을 한꺼번에 보여주면 지금 보고 싶은 점이 뭔지 헷갈린다).
  */
 export default function TrendLineChart({ weeks, series, metric = 'roas', breakevenValue = 1 }) {
   const W = 560;
@@ -16,6 +19,8 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
   const padB = 30;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
+  const svgRef = useRef(null);
+  const [hover, setHover] = useState(null); // { si, pi } — series index, point index
 
   const values = series.flatMap((s) => s.points.map((p) => p[metric]));
   const floor = metric === 'roas' ? 5 : 0.5;
@@ -42,9 +47,48 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
   const labelStep = Math.max(1, Math.ceil(weeks.length / 13));
   const labelWeeks = weeks.filter((w, i) => i % labelStep === 0 || i === weeks.length - 1);
 
+  // 화면 좌표를 SVG viewBox 좌표로 바꾼 뒤, 모든 (채널×주차) 점 중 마우스에 가장 가까운 하나를 찾는다.
+  const handleMove = (e) => {
+    const rect = svgRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    const my = ((e.clientY - rect.top) / rect.height) * H;
+    let best = null;
+    let bestDist = Infinity;
+    series.forEach((s, si) => {
+      s.points.forEach((p, pi) => {
+        const dx = x(p.week) - mx;
+        const dy = y(p[metric]) - my;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) {
+          bestDist = d;
+          best = { si, pi };
+        }
+      });
+    });
+    setHover(best);
+  };
+
+  const hoverPoint = hover ? series[hover.si].points[hover.pi] : null;
+  const hoverSeries = hover ? series[hover.si] : null;
+
+  const tipW = 96;
+  const tipH = 34;
+  let tipX = 0;
+  let tipY = 0;
+  let px = 0;
+  let py = 0;
+  if (hoverPoint) {
+    px = x(hoverPoint.week);
+    py = y(hoverPoint[metric]);
+    tipX = px + 10 + tipW > W - 4 ? px - 10 - tipW : px + 10;
+    tipY = py - tipH - 10 < padT ? py + 12 : py - tipH - 10;
+  }
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img"
-         aria-label={`주차별 ${metric === 'roas' ? 'ROAS' : 'ROI'} 추이 선 그래프`}>
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: 980, height: 'auto', display: 'block' }} role="img"
+         aria-label={`주차별 ${metric === 'roas' ? 'ROAS' : 'ROI'} 추이 선 그래프`}
+         onMouseMove={handleMove} onMouseLeave={() => setHover(null)}>
       {gridVals.map((v) => (
         <g key={v}>
           <line x1={padL} y1={y(v)} x2={padL + plotW} y2={y(v)}
@@ -90,6 +134,22 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
           </g>
         );
       })}
+
+      {/* 마우스를 올리면 가장 가까운 점 하나만 짚어서 보여준다. */}
+      <rect x={padL} y={padT} width={plotW} height={plotH} fill="transparent" />
+
+      {hoverPoint && (
+        <g pointerEvents="none">
+          <circle cx={px} cy={py} r="4.5" fill={hoverSeries.color} stroke="#fff" strokeWidth="1.5" />
+          <rect x={tipX} y={tipY} width={tipW} height={tipH} fill="#14181f" rx="2" />
+          <text x={tipX + 8} y={tipY + 14} fontSize="10" fill={hoverSeries.color} fontFamily="IBM Plex Sans KR, sans-serif" fontWeight="600">
+            {hoverSeries.name}
+          </text>
+          <text x={tipX + 8} y={tipY + 27} fontSize="10" fill="#fff" fontFamily="IBM Plex Mono, monospace">
+            {hoverPoint.week}주 · {pct(hoverPoint[metric], 0)}%
+          </text>
+        </g>
+      )}
     </svg>
   );
 }
