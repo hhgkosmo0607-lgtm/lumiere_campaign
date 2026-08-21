@@ -177,7 +177,15 @@ export default function App() {
   return (
     <div className="shell">
       <header className="masthead">
-        <div>
+        <div className="brand">
+          {/* 로고: 채널 막대가 손익분기선을 넘었는지 — 이 화면이 하는 일을 그대로 그린 마크 */}
+          <svg className="brand-mark" viewBox="0 0 60 52" aria-hidden="true">
+            <line x1="4" y1="44" x2="56" y2="44" stroke="var(--line)" strokeWidth="1" />
+            <line x1="4" y1="22" x2="56" y2="22" stroke="var(--breakeven)" strokeWidth="2" />
+            <rect x="10" y="10" width="8" height="34" fill="var(--naver)" />
+            <rect x="26" y="26" width="8" height="18" fill="var(--meta)" />
+            <rect x="42" y="16" width="8" height="28" fill="var(--google)" />
+          </svg>
           <h1 className="wordmark">Campaign Insight</h1>
         </div>
       </header>

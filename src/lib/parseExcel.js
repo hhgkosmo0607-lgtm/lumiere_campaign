@@ -6,6 +6,21 @@ const MAX_ROWS = 2000;
 // 플랫폼이 이미 계산해서 주는 비율 컬럼(CTR·ROAS 등)은 안 받는다 — 이 필드들만 가져온다.
 const NUMERIC_FIELDS = ['impressions', 'clicks', 'adSpend', 'conversions', 'revenue'];
 
+// 엑셀 라이브러리는 용량이 커서(빌드하면 약 430KB짜리 별도 파일) 처음부터 받지 않고,
+// 사용자가 실제로 파일을 고르는 순간에 받아온다. 배포 환경에선 네트워크 요청이라 실패할 수 있다.
+// 실패한 약속(promise)을 그대로 남겨두면 새로고침 전까지 계속 같은 실패가 재사용되므로,
+// 실패하면 비워서 다음 시도에 다시 받아오게 한다.
+let xlsxPromise = null;
+function loadXlsx() {
+  if (!xlsxPromise) {
+    xlsxPromise = import('xlsx').catch((e) => {
+      xlsxPromise = null;
+      throw e;
+    });
+  }
+  return xlsxPromise;
+}
+
 function fail(error) {
   return { ok: false, error };
 }
@@ -36,11 +51,17 @@ export async function parsePlatformFile(file, platform) {
     return fail('파일이 너무 큽니다 (2MB 이하만 가능합니다).');
   }
 
-  let workbook;
+  // 엑셀 라이브러리를 먼저 확보한다. 이걸 파일 읽기와 같은 try에 묶으면, 라이브러리를
+  // 못 받아왔을 때도 "파일이 잘못됐다"고 안내하게 돼서 사용자가 멀쩡한 파일을 계속 바꿔보게 된다.
   let XLSX;
   try {
-    // 대부분의 방문자는 이 파일을 한 번도 안 여니, 실제로 파일을 고를 때만 불러온다.
-    XLSX = await import('xlsx');
+    XLSX = await loadXlsx();
+  } catch {
+    return fail('엑셀을 읽는 기능을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요. (파일 문제가 아닙니다)');
+  }
+
+  let workbook;
+  try {
     const isCsv = file.name.toLowerCase().endsWith('.csv');
     if (isCsv) {
       // CSV는 파일 API의 text()로 읽어야 UTF-8(한글 헤더 포함)이 제대로 디코딩된다.

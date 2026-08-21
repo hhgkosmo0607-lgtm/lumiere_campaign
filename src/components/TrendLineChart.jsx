@@ -22,7 +22,8 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
   const svgRef = useRef(null);
   const [hover, setHover] = useState(null); // { si, pi } — series index, point index
 
-  const values = series.flatMap((s) => s.points.map((p) => p[metric]));
+  // 값이 없는 주차(광고를 안 돌린 기간)는 축 범위 계산에서 뺀다.
+  const values = series.flatMap((s) => s.points.map((p) => p[metric])).filter((v) => v != null);
   const floor = metric === 'roas' ? 5 : 0.5;
   const rawMax = Math.max(floor, breakevenValue, ...values);
   const rawMin = Math.min(0, breakevenValue, ...values);
@@ -57,6 +58,7 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
     let bestDist = Infinity;
     series.forEach((s, si) => {
       s.points.forEach((p, pi) => {
+        if (p[metric] == null) return;
         const dx = x(p.week) - mx;
         const dy = y(p[metric]) - my;
         const d = dx * dx + dy * dy;
@@ -118,15 +120,35 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
       ))}
 
       {series.map((s) => {
-        const d = s.points.map((p) => `${x(p.week)},${y(p[metric])}`).join(' ');
-        const last = s.points[s.points.length - 1];
+        // 값이 없는 주차에서 선을 끊는다 — 광고를 쉰 구간을 0%로 이어 그리면
+        // "완전히 실패한 주"처럼 보이기 때문이다. 이어지는 구간마다 선을 따로 그린다.
+        const segments = [];
+        let current = [];
+        s.points.forEach((p) => {
+          if (p[metric] == null) {
+            if (current.length) segments.push(current);
+            current = [];
+          } else {
+            current.push(p);
+          }
+        });
+        if (current.length) segments.push(current);
+
+        const shown = s.points.filter((p) => p[metric] != null);
+        const last = shown[shown.length - 1];
+        if (!last) return null;   // 조건에 걸려 데이터가 하나도 없는 채널
+
         return (
           <g key={s.id}>
-            <polyline points={d} fill="none" stroke={s.color} strokeWidth="1.8"
-                      strokeLinejoin="round" strokeLinecap="round" />
-            {s.points.map((p) => (
+            {segments.map((seg) => (
+              <polyline key={seg[0].week} points={seg.map((p) => `${x(p.week)},${y(p[metric])}`).join(' ')}
+                        fill="none" stroke={s.color} strokeWidth="1.8"
+                        strokeLinejoin="round" strokeLinecap="round" />
+            ))}
+            {shown.map((p) => (
               <circle key={p.week} cx={x(p.week)} cy={y(p[metric])} r="2.4" fill={s.color} />
             ))}
+            {/* 이름표는 그 채널의 마지막 '실제 데이터가 있는' 점 옆에 붙는다 */}
             <text x={x(last.week) + 8} y={y(last[metric]) + 3} fontSize="10" fill={s.color}
                   fontFamily="IBM Plex Sans KR, sans-serif" fontWeight="600">
               {s.name}

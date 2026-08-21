@@ -92,9 +92,15 @@ export function trendByPlatform(rows, platformList = PLATFORMS) {
     name: p.name,
     color: p.color,
     points: weeks.map((w) => {
-      // rows는 이미 App.jsx에서 withMetrics를 거친 값이라 다시 계산할 필요가 없다.
-      const hit = p.rows.find((r) => r.week === w);
-      return { week: w, roas: hit ? hit.roas : 0, roi: hit ? (hit.roi ?? 0) : 0 };
+      // 한 주차엔 여러 날 × 여러 제품의 행이 들어 있다. 그중 한 행을 집어 쓰면 안 되고,
+      // 그 주차 전체의 광고비·매출을 먼저 합산한 뒤 비율을 낸다 (아래 "합계를 먼저" 원칙).
+      const weekRows = p.rows.filter((r) => r.week === w);
+      // 그 주에 광고를 아예 안 돌렸으면 0%가 아니라 '값 없음'이다. 0으로 두면 "돈만 쓰고
+      // 한 건도 못 판 주"와 구분이 안 된다. 그래프는 이 구간에서 선을 끊는다.
+      // 하루라도 데이터가 있으면 그 남은 날짜로 계산한다(주 일부만 쉰 경우).
+      if (weekRows.length === 0) return { week: w, roas: null, roi: null };
+      const a = aggregate(weekRows);
+      return { week: w, roas: a.roas, roi: a.roi ?? 0 };
     }),
   }));
   return { weeks, series };
@@ -124,6 +130,8 @@ export function byProduct(rows, products) {
 
 // 구간을 앞뒤로 나눠 평균을 비교해 추세를 판단한다. threshold(기본 10%) 밑이면 '보합'으로 본다.
 export function trendDirection(points, metric, threshold = 0.1) {
+  // 광고를 안 돌린 주차(값 없음)는 추세 판단에서 제외한다.
+  points = points.filter((p) => p[metric] != null);
   if (points.length < 4) return { dir: 'flat', change: 0 };
   const mid = Math.floor(points.length / 2);
   const avg = (arr) => arr.reduce((a, p) => a + p[metric], 0) / arr.length;

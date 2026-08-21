@@ -93,6 +93,18 @@ body {
   padding-bottom: 20px;
   border-bottom: 1px solid var(--ink);
 }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand-mark {
+  display: block;
+  width: 36px;
+  height: 31px;
+  flex: none;
+  margin-bottom: 8px;
+}
 .wordmark {
   font-family: 'Bodoni Moda', serif;
   font-size: 30px;
@@ -569,6 +581,8 @@ tbody tr:hover td { background: #f7f9fa; }
   .cards { grid-template-columns: 1fr; }
   .shell { padding: 28px 16px 60px; }
   .wordmark { font-size: 24px; }
+  .brand-mark { width: 29px; height: 25px; }
+  .brand { gap: 10px; }
   .controls { gap: 16px; }
   .control, .range-control { flex: 1 1 100%; }
 }

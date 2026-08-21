@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Campaign Insight — 헤더 로고</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14181f;
+    --bg:#eceef1;
+    --line:#dce1e6;
+    --red:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);font-family:'IBM Plex Mono', monospace;}
+
+  .page{max-width:1040px;margin:0 auto;padding:40px 32px 100px;}
+  .note{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);opacity:.5;margin:0 0 14px;}
+
+  header{
+    background:#fff;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 32px;
+    height:64px;
+  }
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand svg{display:block;}
+  .wordmark{
+    font-family:'Bodoni Moda', serif;
+    font-weight:600;
+    font-size:19px;
+    letter-spacing:.08em;
+    color:var(--ink);
+  }
+  nav{display:flex;gap:28px;}
+  nav span{font-size:12px;letter-spacing:.03em;color:var(--ink);opacity:.55;}
+  nav span.active{opacity:1;border-bottom:2px solid var(--red);padding-bottom:20px;}
+
+  .body-mock{background:#fff;border:1px solid var(--line);border-top:none;height:280px;padding:32px;}
+  .body-mock .bar{height:8px;background:var(--line);width:40%;margin-bottom:14px;}
+  .body-mock .bar.short{width:22%;}
+
+  .isolated{
+    margin-top:56px;
+    background:#fff;
+    border:1px solid var(--line);
+    padding:48px;
+    display:flex;
+    justify-content:center;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="note">사이트 상단 배치 — 실제 헤더 맥락</p>
+  <header>
+    <div class="brand">
+      <svg width="26" height="22" viewBox="0 0 60 52">
+        <line x1="4" y1="44" x2="56" y2="44" stroke="var(--line)" stroke-width="1"/>
+        <line x1="4" y1="22" x2="56" y2="22" stroke="#c0392b" stroke-width="2"/>
+        <rect x="10" y="10" width="8" height="34" fill="#14705c"/>
+        <rect x="26" y="26" width="8" height="18" fill="#a54a76"/>
+        <rect x="42" y="16" width="8" height="28" fill="#b8801a"/>
+      </svg>
+      <span class="wordmark">Campaign Insight</span>
+    </div>
+    <nav>
+      <span class="active">대시보드</span>
+      <span>업로드</span>
+      <span>설정</span>
+    </nav>
+  </header>
+  <div class="body-mock">
+    <div class="bar"></div>
+    <div class="bar short"></div>
+    <div class="bar" style="width:60%;"></div>
+  </div>
+
+  <div class="isolated">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <svg width="34" height="29" viewBox="0 0 60 52">
+        <line x1="4" y1="44" x2="56" y2="44" stroke="var(--line)" stroke-width="1"/>
+        <line x1="4" y1="22" x2="56" y2="22" stroke="#c0392b" stroke-width="2"/>
+        <rect x="10" y="10" width="8" height="34" fill="#14705c"/>
+        <rect x="26" y="26" width="8" height="18" fill="#a54a76"/>
+        <rect x="42" y="16" width="8" height="28" fill="#b8801a"/>
+      </svg>
+      <span class="wordmark" style="font-size:24px;">Campaign Insight</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
