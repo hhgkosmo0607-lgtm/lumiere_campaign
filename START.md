@@ -86,16 +86,17 @@ GitHub에 처음 올리려고 해. 저장소는 만들었고 주소는 (주소)�
 
 ---
 
-### 4단계 — Vercel 배포 (직접, 10분)
+### 4단계 — GitHub Pages 배포 (직접, 10분)
 
-1. https://vercel.com 에서 GitHub 계정으로 로그인
-2. **Add New → Project** → 저장소 선택
-3. **Environment Variables** 에 `.env` 의 6개 값을 그대로 입력 — **이걸 빼먹으면 샘플 데이터로 뜹니다**
-4. **Deploy**
+이 저장소는 GitHub Pages로 배포하도록 이미 설정돼 있습니다(`.github/workflows/deploy.yml`).
+main에 push만 하면 자동으로 빌드·배포됩니다. GitHub Pages 무료 플랜은 공개 저장소만
+지원하니, 저장소가 비공개면 먼저 공개로 바꿔야 합니다.
 
-1~2분 뒤 주소가 나옵니다.
+1. 저장소 **Settings > Secrets and variables > Actions**에서 `.env`의 6개 값을 `New repository secret`으로 등록 — **이걸 빼먹으면 업로드 기능이 꺼진 채로 뜹니다**
+2. **Settings > Pages**에서 Source를 **GitHub Actions**로 지정
+3. main에 push → **Actions** 탭에서 진행 상황 확인, 1~2분 뒤 `https://{계정}.github.io/{저장소이름}/`에서 확인
 
-배포 후 반드시 확인할 것: 상단에 경고 띠가 없어야 정상입니다. 띠가 보이면 환경변수가 잘못 들어간 것입니다.
+Vercel로 배포하고 싶다면(비공개 저장소도 가능, 루트 경로에 뜸) [README.md "Day 7"](README.md)의 방법 B를 참고하세요.
 
 ---
 

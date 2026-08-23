@@ -132,7 +132,24 @@ npm run dev
 
 ## Day 7 — 배포하기
 
-### 방법 A: Vercel (더 쉬움, 추천)
+이 저장소는 **GitHub Pages**로 배포하도록 이미 설정돼 있다(`.github/workflows/deploy.yml`).
+main에 커밋을 올리면 GitHub Actions가 자동으로 빌드해서 올린다 — 로컬에서 배포 버튼을
+따로 누를 필요가 없다. 배포 주소는 `https://{GitHub 계정}.github.io/{저장소 이름}/`이다.
+
+### 방법 A: GitHub Pages (이 저장소가 실제로 쓰는 방식)
+
+GitHub Pages 무료 플랜은 **공개(Public) 저장소만** 지원한다(비공개면 Pro 이상 필요).
+
+1. 저장소 **Settings > General > Danger Zone**에서 Public으로 전환(이미 공개라면 생략)
+2. **Settings > Secrets and variables > Actions**에서 `.env`의 6개 값을 `New repository secret`으로 각각 등록 (`VITE_FB_API_KEY` 등 — 이름을 `.env`와 똑같이)
+3. **Settings > Pages**에서 Source를 **GitHub Actions**로 지정
+4. main에 커밋을 push하면 `.github/workflows/deploy.yml`이 자동으로 빌드·배포한다 — **Actions** 탭에서 진행 상황을 볼 수 있다
+
+**GitHub Pages는 루트가 아니라 하위 경로(`/저장소이름/`)에 뜬다.** 그래서 `vite.config.js`가
+`GITHUB_PAGES` 환경변수가 있을 때만 그 경로를 base로 잡는다(로컬 개발은 그대로 루트). 저장소
+이름을 바꾸면 `vite.config.js`의 `/lumiere_campaign/`도 같이 고쳐야 한다.
+
+### 방법 B: Vercel
 
 1. 코드를 GitHub에 올립니다 (`.env`는 `.gitignore`에 있어서 안 올라갑니다)
 2. https://vercel.com 에서 GitHub 계정으로 로그인
@@ -140,7 +157,9 @@ npm run dev
 4. **Environment Variables** 에 `.env`의 6개 값을 그대로 입력
 5. **Deploy** 클릭 → 1~2분 뒤 주소가 나옵니다
 
-### 방법 B: Firebase Hosting
+Vercel은 저장소가 비공개여도 되고, 루트 경로에 뜨니 `GITHUB_PAGES` 환경변수는 안 넣어도 된다.
+
+### 방법 C: Firebase Hosting
 
 ```bash
 npm install -g firebase-tools
@@ -290,7 +309,8 @@ npm run samples
 | 업로드 시 "없는 컬럼" 에러 | 선택한 플랫폼과 실제 파일이 다르거나(예: 네이버 선택했는데 구글 파일), 리포트 다운로드 옵션에서 일부 컬럼을 뺐을 수 있음 |
 | 업로드 시 "날짜 값을 읽을 수 없습니다" | 날짜 컬럼 형식이 예상과 다름. YYYY-MM-DD 형태를 기준으로 만들었음 |
 | 한글이 깨짐 | 브라우저가 폰트를 못 불러온 경우. 인터넷 연결 확인 |
-| Vercel 배포 후 샘플 데이터로 표시됨 | Vercel에 환경변수 6개를 넣지 않았거나 이름 오타. 넣은 뒤 재배포 필요 |
+| 배포 후 빈 화면(업로드 기능 꺼짐)으로 뜸 | 저장소 Secrets에 환경변수 6개를 안 넣었거나 이름 오타. 넣은 뒤 다시 push(또는 Actions 탭에서 재실행) 필요 |
+| GitHub Pages에서 파비콘·이미지·CSS가 안 뜸 | `vite.config.js`의 base 경로가 저장소 이름과 다름. 저장소 이름을 바꿨다면 base도 같이 고쳐야 함 |
 
 ---
 
