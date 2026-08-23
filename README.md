@@ -51,15 +51,15 @@ VITE_FB_SENDER_ID=123456789
 VITE_FB_APP_ID=1:123456789:web:abc123
 ```
 
-### 2-5. 데이터 한 번에 올리기 (1,800건)
+### 2-5. 설치
 
 ```bash
 npm install
-npm run seed
 ```
 
-콘솔에 `올리는 중: 100/1800` … 식으로 진행 상황이 찍히다 `완료. 총 1800개 문서.`가 뜨면 성공입니다.
-Firebase 콘솔의 Firestore 화면을 새로고침하면 `campaigns` 컬렉션이 생겨 있습니다.
+**데모 데이터를 Firestore에 올릴 필요는 없습니다.** 같은 데이터가 앱 안(`src/sample-data.json`)에 들어 있어서 "샘플 데이터로 둘러보기"를 누르면 바로 뜹니다.
+
+예전에는 `npm run seed`로 1,800개 문서를 올려서 서버에서 읽어왔는데, 그러면 **페이지를 한 번 열 때마다 읽기가 1,800회** 발생합니다(무료 한도 50,000회/일 ÷ 1,800 ≈ 하루 27번이면 소진). 그래서 서버에서 읽지 않도록 바꿨습니다. `npm run seed` 명령은 남겨뒀으니 나중에 마음이 바뀌면 다시 쓸 수 있습니다.
 
 ---
 
@@ -164,16 +164,33 @@ Firebase 콘솔 > Firestore Database > **규칙** 탭에서:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // 데모 데이터: 누구나 읽을 수 있지만 아무도 못 고친다
     match /campaigns/{doc} {
       allow read: if true;
       allow write: if false;
+    }
+
+    // 업로드한 데이터: 링크를 아는 사람은 읽을 수 있고,
+    // 로그인한 세션만 새로 만들 수 있으며, 한 번 만들면 못 고치고 못 지운다
+    match /uploads/{id} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.rows is list
+        && request.resource.data.rows.size() > 0
+        && request.resource.data.rows.size() <= 3000
+        && request.resource.data.keys().hasOnly(['rows', 'platforms', 'createdAt', 'expiresAt']);
+      allow update, delete: if false;
     }
   }
 }
 ```
 
-저장하면 대시보드는 정상 작동하고, 외부에서 데이터를 고치는 건 막힙니다.
-이후 데이터를 다시 올리려면 `allow write: if true;` 로 잠깐 바꾸고 `npm run seed` 실행한 뒤 되돌리면 됩니다.
+**이건 배포 전 필수입니다.** Firestore를 "테스트 모드"로 만들면 30일간 누구나 읽고 쓰고 지울 수 있습니다. 그 상태로 배포하면 주소를 아는 사람이 데이터를 지우거나 남의 공유 링크를 없앨 수 있습니다. API 키는 웹앱에 어차피 노출되는 값이라 숨긴다고 막히지 않습니다 — 실제 방어는 이 규칙이 합니다.
+
+`rows.size() <= 3000`은 앱의 `MAX_UPLOAD_ROWS`와 같은 값이어야 합니다. 한쪽만 바꾸면 화면은 통과시키는데 서버가 영문 오류로 거부합니다.
+
+`npm run seed`로 데이터를 다시 올리려면 `campaigns`의 `allow write`를 잠깐 `if true`로 바꾸고 실행한 뒤 되돌리면 됩니다.
 
 ---
 
@@ -188,9 +205,9 @@ service cloud.firestore {
 
 로그인 화면은 따로 안 생깁니다. 사용자가 업로드 버튼을 누르는 순간 화면 뒤에서 조용히 익명 세션을 만드는 용도입니다.
 
-### 5-2. 보안 규칙에 `uploads` 컬렉션 추가
+### 5-2. 보안 규칙에 `uploads` 컬렉션이 들어있는지 확인
 
-**규칙** 탭에서 위 4번 규칙에 아래 내용을 이어 붙입니다.
+위 **4번**에서 넣은 규칙에 `uploads` 컬렉션 규칙이 이미 포함돼 있습니다(따로 추가할 필요 없음). 규칙 탭에서 아래처럼 `match /uploads/{id}` 블록이 있는지만 확인하세요.
 
 ```
 match /uploads/{id} {
@@ -198,13 +215,13 @@ match /uploads/{id} {
   allow create: if request.auth != null
     && request.resource.data.rows is list
     && request.resource.data.rows.size() > 0
-    && request.resource.data.rows.size() <= 2000
+    && request.resource.data.rows.size() <= 3000
     && request.resource.data.keys().hasOnly(['rows', 'platforms', 'createdAt', 'expiresAt']);
   allow update, delete: if false;
 }
 ```
 
-`campaigns`(읽기 전용)와 별개 컬렉션이라 기존 규칙은 그대로 둡니다. 업로드는 생성만 가능하고, 한 번 만들어진 공유 링크의 내용은 나중에 수정·삭제할 수 없습니다.
+`campaigns`(읽기 전용)와 별개 컬렉션이라 서로 규칙이 섞이지 않습니다. 업로드는 생성만 가능하고, 한 번 만들어진 공유 링크의 내용은 나중에 수정·삭제할 수 없습니다.
 
 ### 5-3. 어떤 파일을 올리면 되는지
 
@@ -231,7 +248,13 @@ CTR·ROAS처럼 플랫폼이 이미 계산해서 주는 비율 컬럼은 파일�
 
 각 플랫폼 파일 형식 예시는 `public/sample-naver-export.csv`(네이버) / `sample-google-export.csv`(구글) / `sample-meta-export.csv`(메타) / `sample-kakao-export.csv`(카카오)에 있고, 업로드 화면에서도 선택한 플랫폼에 맞는 예시 파일 링크가 뜹니다. 이 파일들은 헤더 + 두어 줄짜리라 **어떤 컬럼이 필요한지 확인하는 용도**입니다.
 
-실제로 올려보려면 `scripts/native/` 아래의 리포트 샘플을 쓰세요. 파일 하나에 여러 제품의 캠페인이 섞여 있어 캠페인→제품 매칭 단계까지 제대로 확인할 수 있습니다.
+실제로 올려보려면 `scripts/native/` 아래의 리포트 샘플을 쓰세요. **이 파일들은 저장소에 없으니 먼저 만들어야 합니다.**
+
+```bash
+npm run samples
+```
+
+38개 파일이 만들어집니다. 언제 실행해도 같은 파일이 나옵니다. 파일 하나에 여러 제품의 캠페인이 섞여 있어 캠페인→제품 매칭 단계까지 제대로 확인할 수 있습니다.
 
 | 폴더 | 업종 | 채널 × 제품 | 올려보면 볼 수 있는 것 |
 |---|---|---|---|
@@ -269,5 +292,5 @@ CTR·ROAS처럼 플랫폼이 이미 계산해서 주는 비율 컬럼은 파일�
 
 ## 데이터에 대한 안내
 
-기본으로 뜨는 90일(약 13주) 데모는 **루미에르(LUMIÈRE)**라는 실존하지 않는 가상 브랜드가 스킨케어 5개 제품을 4개 채널에 광고하는 샘플 시나리오입니다 (도구 자체의 이름은 "Campaign Insight"이고, 루미에르는 그 안의 예시 데이터일 뿐입니다).
+"샘플 데이터로 둘러보기"를 누르면 나오는 90일(약 13주) 데모는 **루미에르(LUMIÈRE)**라는 실존하지 않는 가상 브랜드가 스킨케어 5개 제품을 4개 채널에 광고하는 샘플 시나리오입니다 (도구 자체의 이름은 "Campaign Insight"이고, 루미에르는 그 안의 예시 데이터일 뿐입니다).
 모든 수치는 채널별 특성(검색은 전환율이 높고, 소셜은 클릭률이 높다 등)을 반영해 직접 설계한 가상 데이터이며, 실제 광고 계정에서 가져온 데이터가 아닙니다.

@@ -11,9 +11,13 @@
 React 18 + Vite · Firebase Firestore (읽기 전용) · 차트는 라이브러리 없이 SVG 직접 작성
 
 ```bash
-npm run dev     # 개발 서버
-npm run build   # 빌드
-npm run seed    # scripts/campaigns.json 을 Firestore에 업로드
+npm run dev      # 개발 서버
+npm run build    # 빌드
+npm run test     # 계산 로직·컴포넌트 자동 테스트 (Vitest)
+npm run lint     # 코드 검사 (ESLint, react-hooks 규칙 포함)
+npm run samples  # 업로드 테스트용 리포트 샘플을 scripts/native/ 에 만든다 (저장소에 없음)
+npm run verify   # 화면 숫자가 맞는지 검사 (엑셀 직접 계산과 대조 + preview.html 대조)
+npm run seed     # scripts/campaigns.json 을 Firestore에 올린다 (지금은 쓰지 않는다, 아래 참고)
 ```
 
 ## 이 프로젝트의 원칙
@@ -42,7 +46,9 @@ npm run seed    # scripts/campaigns.json 을 Firestore에 업로드
 
 ## 데이터
 
-`campaigns` 컬렉션, 1,800개 문서 (90일 × 4채널 × 5제품, 일 단위). 문서 ID는 `2026-05-01_naver_비타민C세럼` 형식(날짜+채널+제품 조합이 유일 키).
+기본 데모는 `src/sample-data.json`(90일 × 4채널 × 5제품, 1,800행) 하나다. **앱은 Firestore의 `campaigns` 컬렉션을 읽지 않는다** — 문서 1,800개를 매번 읽으면 페이지 한 번 열 때 읽기가 1,800회 발생해서, 같은 데이터를 앱 안에 두는 쪽으로 바꿨다(`fetchCampaigns()`는 제거했다). `scripts/seed.js`와 `npm run seed`는 그대로 남겨뒀다 — 다시 서버에서 읽고 싶어지면 되살릴 수 있게.
+
+**첫 화면에는 아무 데이터도 안 뜬다.** 사용자가 자기 리포트를 올리는 데서 시작하는 도구라, 남의 데모 데이터를 미리 채워두지 않는다. "샘플 데이터로 둘러보기"를 누르면 그때 `sample-data.json`을 받아온다(약 240KB, 별도 파일로 분리돼 있다). 공유 링크(`?d=...`)로 들어오면 그 데이터를 바로 보여준다.
 
 ```
 date, platform, product, adSpend, impressions, clicks, conversions, revenue, margin
@@ -58,7 +64,9 @@ date, platform, product, adSpend, impressions, clicks, conversions, revenue, mar
 
 **파일 하나 = 플랫폼 하나**지만, 여러 플랫폼 파일을 한 번에 선택할 수 있다(`input[type=file] multiple`). 파일마다 어느 플랫폼인지 지정하면(대기열 단계), 실제 리포트 하나엔 보통 여러 제품의 캠페인이 섞여 있으므로(제품별로 미리 쪼개서 받지 않는다) 대기열의 모든 파일을 한 번에 파싱해 그 안의 고유 캠페인명을 전부 모아 **캠페인마다 제품을 매칭받는 화면 한 번**으로 처리한다 — 파일마다 매칭 화면을 반복하지 않는다(`UploadPanel.jsx`의 `startBatch()`). 캠페인명에 이미 확인한 제품명의 단어가 포함돼 있으면 자동으로 추측해 채워둔다(`guessProduct()`, 이 세션에서 앞서 올린 파일들에서 확정한 제품명을 대상으로 매칭). 아직 확인된 제품이 하나도 없는 첫 배치라면, 캠페인명에서 플랫폼·캠페인유형 같은 흔한 단어(`CAMPAIGN_STOPWORDS`)를 걷어내고 남는 부분을 후보로 채운다(`stripCampaignStopwords()`) — 완전히 빈칸으로 두지 않는다. 회사·채널마다 캠페인 이름 짓는 방식이 달라 100% 맞지는 않으므로 사람이 확인·수정한다.
 
-제품 매칭이 끝나면 그다음 단계에서 이번 배치에 걸린 **고유 제품별로 마진율을 한 번씩만** 입력받는다(이 역시 파일 수와 무관하게 한 화면) — 마진율은 캠페인이 아니라 제품의 속성이라, 캠페인 단위로 따로 받으면 같은 제품인데 마진율이 서로 다르게 입력되는 실수가 생기기 때문이다. 확정하면 파일별로 다시 나뉘어 배치 목록에 쌓이고, 배치를 계속 추가해 하나의 배열로 합친 뒤 마지막에 한 번만 업로드한다. `product`가 없으면(비워두면) 그 행은 `'전체'`로 취급돼 필터·표에 제품 관련 UI가 아예 안 보인다(제품이 2개 이상일 때만 노출). `margin`(마진율)이 있으면 이익·ROI·진짜 손익분기 ROAS(`1 ÷ 마진율`)를 계산할 수 있다 — 없으면 손익분기선은 ROAS 100%를 쓴다. 마진율은 제품 단위 값 하나만 받는다 — 채널별 판매수수료처럼 채널마다 원가율이 달라질 수 있는 경우가 실무에 있지만, "회사 축을 만들지 않는다"는 원칙과 같은 이유로 범위를 넓히지 않았다(다음 확장 후보).
+제품 매칭이 끝나면 그다음 단계에서 이번 배치에 걸린 **고유 제품별로 마진율을 한 번씩만** 입력받는다(이 역시 파일 수와 무관하게 한 화면) — 마진율은 캠페인이 아니라 제품의 속성이라, 캠페인 단위로 따로 받으면 같은 제품인데 마진율이 서로 다르게 입력되는 실수가 생기기 때문이다. 확정하면 파일별로 다시 나뉘어 배치 목록에 쌓이고, 배치를 계속 추가해 하나의 배열로 합친 뒤 마지막에 한 번만 업로드한다. 한 번에 올릴 수 있는 양은 **3,000행**까지다(`UploadPanel.jsx`의 `MAX_UPLOAD_ROWS`). 저장소가 문서 하나를 1MB로 제한하는데 한 행이 약 230바이트라 3,000행이면 700KB쯤 된다. 이 값은 Firestore 보안 규칙의 `rows.size()` 제한과 **반드시 같아야 한다** — 다르면 화면은 통과시키는데 서버가 영문 오류로 거부한다.
+
+`product`가 없으면(비워두면) 그 행은 `'전체'`로 취급돼 필터·표에 제품 관련 UI가 아예 안 보인다(제품이 2개 이상일 때만 노출). `margin`(마진율)이 있으면 이익·ROI·진짜 손익분기 ROAS(`1 ÷ 마진율`)를 계산할 수 있다 — 없으면 손익분기선은 ROAS 100%를 쓴다. 마진율은 제품 단위 값 하나만 받는다 — 채널별 판매수수료처럼 채널마다 원가율이 달라질 수 있는 경우가 실무에 있지만, "회사 축을 만들지 않는다"는 원칙과 같은 이유로 범위를 넓히지 않았다(다음 확장 후보).
 
 "회사"(client) 축은 만들지 않는다 — 실사용자는 예산 주체(회사)는 하나, 제품만 여러 개라는 전제. 캠페인·광고그룹은 원본 값을 행마다 저장은 하지만 필터·차트에는 아직 안 쓴다(다음 확장 후보).
 
@@ -83,7 +91,9 @@ date, platform, product, adSpend, impressions, clicks, conversions, revenue, mar
 
 ### 업로드 테스트용 샘플 — 실제 리포트 형태
 
-`scripts/native/` 아래에 플랫폼이 실제로 내보내는 컬럼명 그대로 만든 리포트 샘플이 두 벌 있다. 기본 데모(`campaigns` 컬렉션)는 건드리지 않고, 업로드 기능을 테스트할 때만 쓴다.
+`scripts/native/` 아래에 플랫폼이 실제로 내보내는 컬럼명 그대로 만든 리포트 샘플이 업종별로 있다. 업로드 기능을 테스트할 때 쓴다.
+
+**이 파일들은 저장소에 없다.** 38개 xlsx가 4.4MB라 `.gitignore`에 넣었고, `npm run samples` 한 번이면 전부 다시 만들어진다(난수 seed가 고정이라 언제 돌려도 같은 파일이 나온다). 클론한 직후에는 폴더가 비어 있는 게 정상이다.
 
 | 폴더 | 업종 | 브랜드(가상) | 규모 | 이 폴더로 확인하는 것 |
 |---|---|---|---|---|
@@ -134,4 +144,4 @@ date, platform, product, adSpend, impressions, clicks, conversions, revenue, mar
 
 `npm run build` 가 통과하는지 확인한다. 화면을 바꿨다면 채널 필터와 기간 슬라이더를 조합해 숫자가 어긋나지 않는지 확인한다.
 
-`preview.html` 은 React 앱과 같은 화면을 npm 설치 없이 보여주는 미리보기다. **UI를 바꾸면 이 파일도 함께 갱신한다.** 기본 데모 자체에 `margin`·`product`가 있어서(위 "데이터" 참고) 표 페이지네이션·ROAS↔ROI 전환·제품별 비교 패널·이익/ROI 표 컬럼이 preview.html에서도 실제로 켜진다 — React 쪽 계산식(`metrics.js`의 `withMetrics`/`aggregate`/`byProduct`, `CompareBarChart`/`TrendLineChart`의 음수 처리)을 그대로 vanilla JS로 옮겨서 반영한다. 유일한 예외는 업로드 기능이다(Firestore 쓰기·익명 인증이 필요) — preview.html은 어떤 방식으로도 데이터를 쓰지 않는 정적 미리보기로 유지한다.
+`preview.html` 은 React 앱과 같은 화면을 npm 설치 없이 보여주는 미리보기다. **UI를 바꾸면 이 파일도 함께 갱신한다.** 기본 데모 자체에 `margin`·`product`가 있어서(위 "데이터" 참고) 표 페이지네이션·ROAS↔ROI 전환·제품별 비교 패널·이익/ROI 표 컬럼이 preview.html에서도 실제로 켜진다 — React 쪽 계산식(`metrics.js`의 `withMetrics`/`aggregate`/`byProduct`, `CompareBarChart`/`TrendLineChart`의 음수 처리)을 그대로 vanilla JS로 옮겨서 반영한다. 예외가 두 가지 있다. 하나는 업로드 기능(Firestore 쓰기·익명 인증이 필요) — preview.html은 어떤 방식으로도 데이터를 쓰지 않는 정적 미리보기로 유지한다. 다른 하나는 첫 화면인데, React 앱은 빈 화면에서 시작하지만 **preview.html은 샘플 데이터가 채워진 대시보드를 바로 보여준다** — 설치 없이 결과물을 보여주는 게 이 파일의 목적이라 빈 화면으로 열리면 아무 쓸모가 없기 때문이다. 계산·표시 로직은 여전히 양쪽이 같아야 하고, `npm run verify`가 그걸 대조한다.
