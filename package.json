@@ -7,16 +7,29 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "samples": "node scripts/gen-cosmetics.mjs && node scripts/gen-apparel.mjs && node scripts/gen-samples.mjs",
+    "verify": "node scripts/verify.mjs",
+    "test": "vitest run",
+    "lint": "eslint ."
   },
   "dependencies": {
     "firebase": "^10.12.0",
+    "prop-types": "^15.8.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.3.1"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.11.0",
+    "jsdom": "^30.0.1",
+    "vite": "^5.3.1",
+    "vitest": "^4.1.11"
   }
 }
