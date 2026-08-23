@@ -45,6 +45,11 @@ export default [
     rules: { 'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }] },
   },
   {
+    // 프로젝트 루트의 설정 파일들(vite.config.js 등)도 Node 환경에서 돈다.
+    files: ['*.config.js'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: globals.node },
+  },
+  {
     ignores: ['dist/**', 'node_modules/**', 'scripts/native/**', 'preview.html'],
   },
 ];

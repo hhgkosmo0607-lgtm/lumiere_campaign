@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+# main에 커밋이 올라갈 때마다 자동으로 빌드해서 GitHub Pages에 올린다.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Actions 탭에서 수동으로도 실행할 수 있게
+
+# Pages에 쓰기 위해 필요한 권한. 기본 GITHUB_TOKEN 권한은 read-only라 명시해야 한다.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포가 겹치면(연달아 push) 뒤에 올라온 것만 반영하고 중간 것은 취소한다.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          GITHUB_PAGES: true
+          # Firebase 웹 설정값. 비밀키가 아니라(브라우저에 어차피 노출되는 공개 식별자)
+          # 저장소 설정 > Secrets and variables > Actions 에 등록해둔 값을 여기서 꺼내 쓴다.
+          VITE_FB_API_KEY: ${{ secrets.VITE_FB_API_KEY }}
+          VITE_FB_AUTH_DOMAIN: ${{ secrets.VITE_FB_AUTH_DOMAIN }}
+          VITE_FB_PROJECT_ID: ${{ secrets.VITE_FB_PROJECT_ID }}
+          VITE_FB_STORAGE_BUCKET: ${{ secrets.VITE_FB_STORAGE_BUCKET }}
+          VITE_FB_SENDER_ID: ${{ secrets.VITE_FB_SENDER_ID }}
+          VITE_FB_APP_ID: ${{ secrets.VITE_FB_APP_ID }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

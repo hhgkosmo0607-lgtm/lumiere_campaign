@@ -2,11 +2,15 @@ import PropTypes from 'prop-types';
 import { UPLOAD_PLATFORMS } from '../../lib/platforms.js';
 import { MAX_UPLOAD_ROWS } from '../../lib/useUploadBatch.js';
 
+// import.meta.env.BASE_URL은 배포 위치에 맞춰 Vite가 채워주는 값이다(로컬 개발이면 '/',
+// GitHub Pages처럼 하위 경로에 배포되면 '/lumiere_campaign/' 등). 경로를 '/sample-...'로
+// 직접 적으면 하위 경로 배포에서 루트를 가리켜버려 파일을 못 찾는다(vite.config.js 참고).
+const BASE = import.meta.env.BASE_URL;
 const SAMPLE_FILES = {
-  naver: '/sample-naver-export.csv',
-  google: '/sample-google-export.csv',
-  meta: '/sample-meta-export.csv',
-  kakao: '/sample-kakao-export.csv',
+  naver: `${BASE}sample-naver-export.csv`,
+  google: `${BASE}sample-google-export.csv`,
+  meta: `${BASE}sample-meta-export.csv`,
+  kakao: `${BASE}sample-kakao-export.csv`,
 };
 
 /**
