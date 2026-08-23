@@ -1,0 +1,25 @@
+name: CI
+
+# main에 커밋을 올리거나(push) 그걸로 PR을 열 때마다 자동으로 돈다.
+# 사람이 npm test/lint/build를 손으로 돌리는 걸 깜빡해도, 여기서 대신 잡아준다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
