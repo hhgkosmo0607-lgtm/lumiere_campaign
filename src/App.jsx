@@ -1,19 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
-import { fetchCampaigns, isConfigured } from './firebase';
-import { fetchUpload } from './lib/uploadFirestore';
-import { derivePlatforms } from './lib/platforms';
-import sampleData from './sample-data.json';
-import { withMetrics, deriveWeeks, aggregate, byPlatform, byProduct, trendByPlatform, trendDirection, funnelDiagnosis, PLATFORMS, platformInfo } from './lib/metrics';
-import { buildCsv, buildFileName, downloadCsv } from './lib/exportCsv';
-import { sortRows } from './lib/sort';
-import useDashboardState from './lib/useDashboardState';
-import SummaryCards from './components/SummaryCards';
-import CompareBarChart from './components/CompareBarChart';
-import TrendLineChart from './components/TrendLineChart';
-import ShareCompareChart from './components/ShareCompareChart';
-import DataTable from './components/DataTable';
-import Controls from './components/Controls';
-import UploadPanel from './components/UploadPanel';
+/**
+ * 이 앱의 심장. 데이터를 어디서 가져올지 결정하고(빈 화면 / 샘플 / 업로드),
+ * 사용자가 고른 조건(채널·제품·기간)으로 딱 한 번만 걸러낸 뒤, 그 결과를 카드·그래프·
+ * 표 컴포넌트들에게 나눠준다. 계산은 절대 여기서 직접 하지 않는다 — lib/metrics.js의
+ * 함수들을 부를 뿐이다. "화면을 조립하는 곳"과 "숫자를 계산하는 곳"을 분리해두면,
+ * 계산식이 바뀌어도 이 파일은 거의 안 바뀌고, 화면 배치가 바뀌어도 계산 파일은 안 바뀐다.
+ */
+import { useEffect, useMemo, useReducer, useState } from 'react';
+import { isConfigured } from './firebase.js';
+import { fetchUpload } from './lib/uploadFirestore.js';
+import { derivePlatforms } from './lib/platforms.js';
+import { withMetrics, deriveWeeks, aggregate, byPlatform, byProduct, trendByPlatform, trendDirection, funnelDiagnosis, PLATFORMS, platformInfo } from './lib/metrics.js';
+import { buildCsv, buildFileName, downloadCsv } from './lib/exportCsv.js';
+import { sortRows } from './lib/sort.js';
+import useDashboardState from './lib/useDashboardState.js';
+import SummaryCards from './components/SummaryCards.jsx';
+import CompareBarChart from './components/CompareBarChart.jsx';
+import TrendLineChart from './components/TrendLineChart.jsx';
+import ShareCompareChart from './components/ShareCompareChart.jsx';
+import DataTable from './components/DataTable.jsx';
+import Controls from './components/Controls.jsx';
+import UploadPanel from './components/UploadPanel.jsx';
+import Masthead from './components/Masthead.jsx';
 
 // '읽어낸 것' 문단은 채널 이름을 하드코딩한 문장이 아니라, metrics.js의 정형 진단 공식
 // (funnelDiagnosis·trendDirection)이 내놓은 분류를 문장으로 바꾸는 표다 — 그래서 업로드한
@@ -26,12 +33,37 @@ const FUNNEL_TEXT = {
   mixed: '',
 };
 
+// dataset(raw·status·activePlatforms·notice) 상태를 한 번에 갈아 끼우는 리듀서.
+// 액션은 세 가지뿐이다 — 이 화면이 데이터를 얻는 방법이 딱 세 가지(빈 화면 시작,
+// 성공적으로 불러옴, 실패)이기 때문이다. 새 데이터 소스가 생겨도 이 세 액션 중
+// 하나로 표현될 가능성이 높다.
+const initialDataset = { raw: [], status: 'loading', activePlatforms: PLATFORMS, notice: '' };
+
+function datasetReducer(state, action) {
+  switch (action.type) {
+    case 'empty':
+      // 볼 데이터가 없는 상태로 되돌린다. notice가 있으면(불러오기 실패) 그 이유를 남긴다.
+      return { raw: [], status: 'empty', activePlatforms: PLATFORMS, notice: action.notice ?? '' };
+    case 'loaded':
+      // 공유 링크 / 샘플 / 방금 업로드 — 어느 경로든 "성공적으로 데이터를 얻었다"는
+      // 같은 모양의 결과라 하나의 액션으로 합쳐도 된다. status만 다르게 받는다.
+      return { raw: action.rows, status: action.status, activePlatforms: action.platforms, notice: '' };
+    default:
+      return state;
+  }
+}
+
 export default function App() {
-  const [raw, setRaw] = useState([]);
-  const [status, setStatus] = useState('loading'); // loading | live | sample | error | upload
-  const [activePlatforms, setActivePlatforms] = useState(PLATFORMS);
+  // raw(원본 행)·status(화면 국면)·activePlatforms(이 데이터에 실제로 있는 채널)·
+  // uploadNotice(안내 문구)는 항상 "한 데이터 소스를 성공/실패로 갈아 끼울 때" 다같이 바뀐다.
+  // 예전엔 이 넷을 각각 useState로 따로 관리해서, "샘플을 불러왔다"는 사건 하나를 표현하는 데
+  // setRaw·setActivePlatforms·setStatus 세 줄을 매번 나란히 호출해야 했다(그 셋이 세트라는
+  // 사실이 코드 어디에도 적혀있지 않았다). 리듀서로 묶으면 "이 넷은 하나의 데이터셋 상태"라는
+  // 관계가 dataset 액션 목록 하나로 명확해진다. (리듀서 정의는 파일 맨 아래 datasetReducer)
+  const [dataset, dispatchDataset] = useReducer(datasetReducer, initialDataset);
+  const { raw, status, activePlatforms, notice: uploadNotice } = dataset;
+  const [loadingSample, setLoadingSample] = useState(false);
   const [datasetId] = useState(() => new URLSearchParams(window.location.search).get('d'));
-  const [uploadNotice, setUploadNotice] = useState('');
   // 마진 데이터가 있을 때만 ROI로 전환할 수 있다. 없으면 항상 ROAS.
   const [metricView, setMetricView] = useState('roas');
   // 조회 조건 영역은 스크롤해도 따라오는데, 표를 오래 보는 동안은 접어서 자리를 줄일 수 있게 한다.
@@ -57,57 +89,52 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (datasetId) {
-        try {
-          const { rows, platforms } = await fetchUpload(datasetId);
-          if (!alive) return;
-          setRaw(rows);
-          setActivePlatforms(platforms);
-          setStatus('upload');
-          return;
-        } catch (e) {
-          console.error(e);
-          if (!alive) return;
-          setUploadNotice(e.message || '공유된 데이터를 불러오지 못했습니다.');
-          const url = new URL(window.location.href);
-          url.searchParams.delete('d');
-          window.history.replaceState(null, '', url);
-        }
-      }
-      if (!isConfigured) {
-        if (alive) {
-          setRaw(sampleData);
-          setActivePlatforms(derivePlatforms(sampleData));
-          setStatus('sample');
-        }
+      // 공유 링크(?d=...)로 들어온 경우에만 서버에서 데이터를 받아온다.
+      // 그 외에는 아무것도 불러오지 않고 빈 화면에서 시작한다 — 사용자가 자기 리포트를
+      // 올리는 게 이 도구의 출발점이고, 쓰지도 않을 데이터를 매번 받아올 이유가 없다.
+      if (!datasetId) {
+        if (alive) dispatchDataset({ type: 'empty' });
         return;
       }
       try {
-        const docs = await fetchCampaigns();
+        const { rows, platforms } = await fetchUpload(datasetId);
         if (!alive) return;
-        setRaw(docs);
-        setActivePlatforms(derivePlatforms(docs));
-        setStatus('live');
+        dispatchDataset({ type: 'loaded', status: 'upload', rows, platforms });
       } catch (e) {
         console.error(e);
         if (!alive) return;
-        setRaw(sampleData);
-        setActivePlatforms(derivePlatforms(sampleData));
-        setStatus('error');
+        const url = new URL(window.location.href);
+        url.searchParams.delete('d');
+        window.history.replaceState(null, '', url);
+        dispatchDataset({ type: 'empty', notice: e.message || '공유된 데이터를 불러오지 못했습니다.' });
       }
     })();
     return () => { alive = false; };
   }, [datasetId]);
 
+  // 샘플 데이터(약 290KB)는 "둘러보기"를 누른 사람만 받아간다.
+  const showSample = async () => {
+    setLoadingSample(true);
+    try {
+      const mod = await import('./sample-data.json');
+      const rows = mod.default;
+      dispatchDataset({ type: 'loaded', status: 'sample', rows, platforms: derivePlatforms(rows) });
+    } catch (e) {
+      console.error(e);
+      dispatchDataset({ type: 'empty', notice: '샘플 데이터를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.' });
+    } finally {
+      setLoadingSample(false);
+    }
+  };
+
   const handleUploaded = (uploadedRows, uploadedPlatforms) => {
-    setRaw(uploadedRows);
-    setActivePlatforms(uploadedPlatforms);
-    setStatus('upload');
-    setUploadNotice('');
+    dispatchDataset({ type: 'loaded', status: 'upload', rows: uploadedRows, platforms: uploadedPlatforms });
     reset();
   };
 
   // 날짜→주차 변환과 지표 계산은 lib/metrics.js가 담당한다 (deriveWeeks, withMetrics).
+  // raw.map(withMetrics)로 모든 행에 CTR·ROAS 등을 먼저 붙이고, 그 결과를 deriveWeeks에
+  // 넘겨 주차 번호까지 붙인다 — "1부-1-2 데이터가 흐르는 길"의 ②③ 단계가 이 한 줄이다.
   const rows = useMemo(() => deriveWeeks(raw.map(withMetrics)), [raw]);
 
   // 데이터가 가진 주차 범위. 주소에 이상한 값이 들어와도 여기서 걸러진다.
@@ -126,7 +153,10 @@ export default function App() {
   const lo = Math.min(Math.max(from ?? minWeek, minWeek), maxWeek);
   const hi = Math.max(Math.min(to ?? maxWeek, maxWeek), minWeek);
 
-  // 조건을 한 번만 적용하고, 카드·그래프·표는 모두 이 결과를 나눠 쓴다.
+  // ★ 이 프로젝트에서 가장 중요한 한 줄. 조건(채널·제품·기간)을 여기서 딱 한 번만
+  // 적용하고, 아래의 카드·그래프·표는 전부 이 filtered 하나만 받아서 쓴다. 컴포넌트마다
+  // 각자 원본 rows를 다시 걸러내게 두면, 필터 로직이 여러 곳에 복사되고 하나만 실수로
+  // 다르게 짜여도 화면끼리 숫자가 어긋난다 — 그걸 막으려고 한 곳으로 강제한 것이다.
   const filtered = useMemo(
     () =>
       rows.filter(
@@ -149,6 +179,38 @@ export default function App() {
   );
 
   if (status === 'loading') return <div className="state">데이터를 불러오는 중…</div>;
+
+  // 아직 볼 데이터가 없는 상태. 이 도구는 사용자가 자기 리포트를 올리는 데서 시작하므로,
+  // 남의 데이터를 미리 채워두지 않고 무엇을 하면 되는지만 보여준다.
+  if (status === 'empty') {
+    return (
+      <div className="shell">
+        <Masthead />
+        <section className="landing">
+          <p className="landing-lead">
+            네이버·구글·메타·카카오에서 받은 광고 리포트를 그대로 올리면,
+            채널을 가로질러 비교하는 한 화면이 만들어집니다.
+            원가(마진율)까지 넣으면 광고 플랫폼이 알려주지 못하는 실제 이익까지 계산합니다.
+          </p>
+          {isConfigured ? (
+            <UploadPanel onUploaded={handleUploaded} startOpen />
+          ) : (
+            <p className="hint">
+              지금은 업로드 기능이 꺼져 있습니다 (Firebase 설정 없음). 아래 샘플로 화면을 볼 수 있습니다.
+            </p>
+          )}
+          <p className="landing-alt">
+            올릴 파일이 없다면{' '}
+            <button type="button" className="linklike" onClick={showSample} disabled={loadingSample}>
+              {loadingSample ? '불러오는 중…' : '샘플 데이터로 둘러보기'}
+            </button>
+            {' '}— 가상의 스킨케어 브랜드가 4개 채널에 90일간 광고한 데이터입니다.
+          </p>
+          {uploadNotice && <p className="upload-error">{uploadNotice}</p>}
+        </section>
+      </div>
+    );
+  }
 
   // 마진이 없으면 ROI 자체가 없으니 무조건 ROAS. 손익분기는 ROAS면 실제 마진 기준(없으면 100%),
   // ROI면 이익이 0이 되는 지점 그 자체다.
@@ -189,19 +251,7 @@ export default function App() {
 
   return (
     <div className="shell">
-      <header className="masthead">
-        <div className="brand">
-          {/* 로고: 채널 막대가 손익분기선을 넘었는지 — 이 화면이 하는 일을 그대로 그린 마크 */}
-          <svg className="brand-mark" viewBox="0 0 60 52" aria-hidden="true">
-            <line x1="4" y1="44" x2="56" y2="44" stroke="var(--line)" strokeWidth="1" />
-            <line x1="4" y1="22" x2="56" y2="22" stroke="var(--breakeven)" strokeWidth="2" />
-            <rect x="10" y="10" width="8" height="34" fill="var(--naver)" />
-            <rect x="26" y="26" width="8" height="18" fill="var(--meta)" />
-            <rect x="42" y="16" width="8" height="28" fill="var(--google)" />
-          </svg>
-          <h1 className="wordmark">Campaign Insight</h1>
-        </div>
-      </header>
+      <Masthead />
 
       <div className="sticky-top">
         <div className="controls-bar">

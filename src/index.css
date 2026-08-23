@@ -246,6 +246,43 @@ body {
 .range input[type='range']::-moz-range-track { background: none; }
 
 /* ---------- section label ---------- */
+/* ---------- 아직 볼 데이터가 없는 첫 화면 ---------- */
+.landing {
+  max-width: 620px;
+  margin: 48px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+}
+.landing-lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--ink-2);
+}
+.landing-alt {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+}
+/* 문장 안에 들어가는 버튼이라 버튼처럼 보이지 않게 한다 */
+.linklike {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--ink-3);
+  padding: 0;
+  cursor: pointer;
+}
+.linklike:hover { border-bottom-color: var(--ink); }
+.linklike:disabled { color: var(--ink-3); cursor: default; }
+
 /* 표 위 라벨 옆에 붙는 내려받기 버튼. 라벨은 대문자 간격이 넓어서 버튼만 원래 크기로 되돌린다. */
 .csv-btn {
   margin-left: auto;
