@@ -246,6 +246,15 @@ body {
 .range input[type='range']::-moz-range-track { background: none; }
 
 /* ---------- section label ---------- */
+/* 표 위 라벨 옆에 붙는 내려받기 버튼. 라벨은 대문자 간격이 넓어서 버튼만 원래 크기로 되돌린다. */
+.csv-btn {
+  margin-left: auto;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
 .eyebrow {
   font-size: 10px;
   letter-spacing: 0.16em;

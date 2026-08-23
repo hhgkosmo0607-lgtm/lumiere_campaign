@@ -4,6 +4,7 @@ import { fetchUpload } from './lib/uploadFirestore';
 import { derivePlatforms } from './lib/platforms';
 import sampleData from './sample-data.json';
 import { withMetrics, deriveWeeks, aggregate, byPlatform, byProduct, trendByPlatform, trendDirection, funnelDiagnosis, PLATFORMS, platformInfo } from './lib/metrics';
+import { buildCsv, buildFileName, downloadCsv } from './lib/exportCsv';
 import { sortRows } from './lib/sort';
 import useDashboardState from './lib/useDashboardState';
 import SummaryCards from './components/SummaryCards';
@@ -156,6 +157,18 @@ export default function App() {
   const breakevenValue = metric === 'roi' ? 0 : totals.breakevenRoas;
   const metricLabel = metric === 'roas' ? 'ROAS' : 'ROI';
 
+  // 화면 표는 50행씩 나눠 보여주지만, 파일에는 지금 조건으로 걸러진 전체가 들어간다.
+  const handleExport = () => {
+    const text = buildCsv(tableRows, {
+      platforms: activePlatforms,
+      showProduct: products.length > 1,
+      showRoi: totals.roi != null,
+    });
+    downloadCsv(text, buildFileName({
+      platform: safePlatform, product: safeProduct, from: lo, to: hi, platforms: activePlatforms,
+    }));
+  };
+
   const sorted = [...platforms].sort((a, b) => b.roas - a.roas);
   const best = sorted[0];
   const worst = sorted[sorted.length - 1];
@@ -291,7 +304,12 @@ export default function App() {
             </section>
           </div>
 
-          <p className="eyebrow">원본 데이터 · {tableRows.length}건</p>
+          <p className="eyebrow">
+            원본 데이터 · {tableRows.length}건
+            <button type="button" className="ghost csv-btn" onClick={handleExport}>
+              CSV로 내려받기
+            </button>
+          </p>
           <DataTable
             rows={tableRows}
             platforms={activePlatforms}

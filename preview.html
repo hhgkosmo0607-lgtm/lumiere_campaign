@@ -255,6 +255,15 @@ body {
 .range input[type='range']::-moz-range-track { background: none; }
 
 /* ---------- section label ---------- */
+/* 표 위 라벨 옆에 붙는 내려받기 버튼. 라벨은 대문자 간격이 넓어서 버튼만 원래 크기로 되돌린다. */
+.csv-btn {
+  margin-left: auto;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
 .eyebrow {
   font-size: 10px;
   letter-spacing: 0.16em;
@@ -889,6 +898,59 @@ const FUNNEL_TEXT = {
 };
 
 // 구간을 앞뒤로 나눠 평균을 비교해 추세를 판단한다. threshold(기본 10%) 밑이면 '보합'으로 본다.
+// ---------- CSV 내보내기 (React 쪽 lib/exportCsv.js와 같은 규칙) ----------
+// 화면 표는 50행씩 나눠 보여주지만 파일에는 걸러진 전체가 들어간다. CTR·ROAS는 "2.55%"가
+// 아니라 0.0255처럼 계산 가능한 숫자로 넣는다 — 엑셀에서 다시 합계·피벗을 돌리는 게 목적이다.
+function csvCell(v) {
+  if (v == null) return '';
+  const t = String(v);
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+}
+const csvRatio = v => (v == null ? '' : Math.round(v * 1e6) / 1e6);
+const csvInt = v => (v == null ? '' : Math.round(v));
+
+function buildCsv(rows, { showProduct, showRoi }) {
+  const columns = [
+    ['날짜', r => r.date],
+    ['주차', r => r.week],
+    ['채널', r => info(r.platform).name],
+    ...(showProduct ? [['제품', r => r.product]] : []),
+    ['광고비', r => csvInt(r.adSpend)],
+    ['노출수', r => csvInt(r.impressions)],
+    ['클릭수', r => csvInt(r.clicks)],
+    ['전환수', r => csvInt(r.conversions)],
+    ['매출', r => csvInt(r.revenue)],
+    ['CTR', r => csvRatio(r.ctr)],
+    ['클릭단가', r => csvInt(r.cpc)],
+    ['전환율', r => csvRatio(r.cvr)],
+    ['ROAS', r => csvRatio(r.roas)],
+    ...(showRoi ? [['이익', r => csvInt(r.profit)], ['ROI', r => csvRatio(r.roi)]] : []),
+  ];
+  const lines = [columns.map(c => csvCell(c[0])).join(',')];
+  rows.forEach(r => lines.push(columns.map(c => csvCell(c[1](r))).join(',')));
+  return lines.join('\r\n');
+}
+
+// 조건을 파일명에 남긴다 — 여러 번 받아도 어떤 조건으로 뽑은 파일인지 구분되도록.
+function buildFileName({ platform, product, from, to }) {
+  const parts = ['campaign-insight'];
+  if (platform && platform !== 'all') parts.push(info(platform).name);
+  if (product && product !== 'all') parts.push(product);
+  parts.push(`${from}-${to}주`);
+  parts.push(new Date().toISOString().slice(0, 10));
+  return `${parts.join('_').replace(/[\\/:*?"<>|]/g, '')}.csv`;
+}
+
+function downloadCsv(text, fileName) {
+  // 맨 앞의 BOM이 없으면 엑셀이 UTF-8로 안 읽어서 한글 컬럼명이 깨진다.
+  const blob = new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
 function trendDirection(points, metric, threshold = 0.1) {
   // 광고를 안 돌린 주차(값 없음)는 추세 판단에서 제외한다.
   points = points.filter(p => p[metric] != null);
@@ -1092,7 +1154,9 @@ function render() {
       </section>
     </div>
 
-    <p class="eyebrow">원본 데이터 · ${tableRows.length}건</p>
+    <p class="eyebrow">원본 데이터 · ${tableRows.length}건
+      <button type="button" class="ghost csv-btn" id="csvExport">CSV로 내려받기</button>
+    </p>
     <div class="table-wrap">
       <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
       ${pagination}
@@ -1164,11 +1228,11 @@ function render() {
   </div>
   <button type="button" class="scroll-top" id="scrollTopBtn" aria-label="맨 위로" style="display:${showScrollTop?'flex':'none'}">↑</button>`;
 
-  bind(lo, hi);
+  bind(lo, hi, { tableRows, plats, totals: t, safeProduct });
   trend.bindHover();
 }
 
-function bind(lo, hi) {
+function bind(lo, hi, view) {
   document.getElementById('toggleControls').onclick = () => { controlsOpen = !controlsOpen; render(); };
   document.getElementById('scrollTopBtn').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -1204,6 +1268,17 @@ function bind(lo, hi) {
   if (pagePrev) pagePrev.onclick = () => { page = Math.max(0, page - 1); render(); };
   const pageNext = document.getElementById('pageNext');
   if (pageNext) pageNext.onclick = () => { page += 1; render(); };
+
+  const csvEl = document.getElementById('csvExport');
+  if (csvEl) csvEl.onclick = () => {
+    const text = buildCsv(view.tableRows, {
+      showProduct: PRODUCTS.length > 1,
+      showRoi: view.totals.roi != null,
+    });
+    downloadCsv(text, buildFileName({
+      platform: state.platform, product: view.safeProduct, from: lo, to: hi,
+    }));
+  };
 
   const resetEl = document.getElementById('reset');
   if (resetEl) resetEl.onclick = () => setState({ ...DEFAULTS });
