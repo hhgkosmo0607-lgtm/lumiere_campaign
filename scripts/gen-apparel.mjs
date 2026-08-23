@@ -20,6 +20,7 @@ import XLSX from 'xlsx';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeMarginDoc } from './margin-doc.mjs';
 
 
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'native', 'apparel');
@@ -128,6 +129,14 @@ for (const platform of Object.keys(PLATFORMS)) {
   XLSX.writeFile(wb, file);
   console.log(`${platform}: ${rows.length - 1}행 → ${path.basename(file)}`);
 }
+
+writeMarginDoc(OUT, {
+  brand: '먼데이 클로짓',
+  industry: '의류',
+  products: PRODUCTS,
+  campaigns: PRODUCTS.flatMap((p) => Object.keys(PLATFORMS).map((pl) => [CAMPAIGN[pl][p.name], p.name])),
+  test: '시즌 전환 — 봄 아우터(트렌치코트)는 무너지고 여름 신상(린넨셔츠)은 올라옵니다. 전체 기간으로는 둘 다 평범하니, 기간을 최근 4주로 좁혀야 결론이 뒤집힙니다. 데일리티셔츠는 ROAS 208%인데 마진이 32%(손익분기 312%)라 실제로는 손해입니다.',
+});
 
 // ---- 심어둔 패턴이 실제로 나오는지 검증 ----
 const agg = (rs) => {

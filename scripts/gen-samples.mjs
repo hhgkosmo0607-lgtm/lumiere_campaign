@@ -16,6 +16,7 @@ import XLSX from 'xlsx';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeMarginDoc } from './margin-doc.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'native');
 const START = new Date(Date.UTC(2026, 4, 1)); // 2026-05-01
@@ -102,7 +103,7 @@ const COMPANIES = [
   {
     slug: 'pet-supplies', brand: '펫테이블', file: 'pettable', seed: 335, naming: 'brand',
     industry: '반려동물 사료·용품',
-    test: '캠페인명 앞에 [펫테이블] 같은 브랜드 대괄호가 붙는다. 자동 제품 추측이 대괄호를 걷어내는지 확인용.',
+    test: '캠페인명 앞에 [펫테이블] 같은 브랜드 이름이 붙는다. 자동 추측은 대괄호는 걷어내지만 브랜드 이름은 못 걸러서 "펫테이블 연어사료"처럼 채워진다 — 매칭 화면에서 사람이 고쳐야 하는 경우다. 회사마다 캠페인 작명 방식이 달라 100% 맞출 수 없다는 걸 보여주는 폴더.',
     platforms: ['naver', 'google', 'meta', 'kakao'],
     products: [
       { name: '연어사료', aov: 42000, margin: 0.38, clicks: 520, cpcMult: 0.9, roas: { naver: 2.2, google: 4.1, meta: 2.0, kakao: 2.1 }, roasSeason: creep },
@@ -216,6 +217,15 @@ function build(company) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Report');
     XLSX.writeFile(wb, path.join(out, `${company.file}-${platform}-native.xlsx`));
   }
+  // 업로드할 때 손으로 넣어야 하는 마진율을 폴더에 적어둔다
+  writeMarginDoc(out, {
+    brand: company.brand,
+    industry: company.industry,
+    products: company.products,
+    campaigns: company.products.flatMap((p) => company.platforms.map((pl) => [naming(p.name, sfx[pl], company.brand), p.name])),
+    test: company.test,
+  });
+
   return audit;
 }
 
