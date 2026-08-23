@@ -35,7 +35,9 @@ export function buildCsv(rows, { platforms, showProduct, showRoi }) {
     ['클릭단가', (r) => int(r.cpc)],
     ['전환율', (r) => ratio(r.cvr)],
     ['ROAS', (r) => ratio(r.roas)],
-    ...(showRoi ? [['이익', (r) => int(r.profit)], ['ROI', (r) => ratio(r.roi)]] : []),
+    // 마진율은 계산 결과(이익·ROI)가 아니라 사용자가 입력한 원본 값이다. 같이 내보내야
+    // 이 파일을 나중에 다시 올렸을 때 이익·ROI를 처음과 똑같이 복원할 수 있다.
+    ...(showRoi ? [['마진율', (r) => ratio(r.margin)], ['이익', (r) => int(r.profit)], ['ROI', (r) => ratio(r.roi)]] : []),
   ];
 
   const lines = [columns.map(([label]) => cell(label)).join(',')];

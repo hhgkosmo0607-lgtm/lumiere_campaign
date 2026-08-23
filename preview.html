@@ -924,7 +924,7 @@ function buildCsv(rows, { showProduct, showRoi }) {
     ['클릭단가', r => csvInt(r.cpc)],
     ['전환율', r => csvRatio(r.cvr)],
     ['ROAS', r => csvRatio(r.roas)],
-    ...(showRoi ? [['이익', r => csvInt(r.profit)], ['ROI', r => csvRatio(r.roi)]] : []),
+    ...(showRoi ? [['마진율', r => csvRatio(r.margin)], ['이익', r => csvInt(r.profit)], ['ROI', r => csvRatio(r.roi)]] : []),
   ];
   const lines = [columns.map(c => csvCell(c[0])).join(',')];
   rows.forEach(r => lines.push(columns.map(c => csvCell(c[1](r))).join(',')));

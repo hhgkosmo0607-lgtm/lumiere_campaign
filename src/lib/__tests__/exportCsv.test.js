@@ -56,3 +56,43 @@ describe('buildFileName', () => {
     expect(name.endsWith('.csv')).toBe(true);
   });
 });
+
+describe('parseSavedCsv — buildCsv로 만든 파일을 다시 읽는다', () => {
+  it('내보낸 CSV를 다시 읽으면 원본과 완전히 같은 rows가 나온다 (왕복 검증)', async () => {
+    const { parseSavedCsv } = await import('../importSavedCsv.js');
+    const csv = buildCsv([row({ margin: 0.5 })], { platforms: PLATFORMS, showProduct: true, showRoi: true });
+    const file = new File(['﻿' + csv], 'x.csv', { type: 'text/csv' });
+    const res = await parseSavedCsv(file);
+    expect(res.ok).toBe(true);
+    expect(res.rows).toEqual([{
+      date: '2026-01-01', platform: 'naver', product: '세럼', margin: 0.5,
+      adSpend: 1000, impressions: 100, clicks: 10, conversions: 1, revenue: 2000,
+    }]);
+  });
+
+  it('제품·마진율 컬럼이 없는 CSV도 읽는다 (제품은 전체로, 마진은 null로)', async () => {
+    const { parseSavedCsv } = await import('../importSavedCsv.js');
+    const csv = buildCsv([row()], { platforms: PLATFORMS, showProduct: false, showRoi: false });
+    const file = new File(['﻿' + csv], 'x.csv', { type: 'text/csv' });
+    const res = await parseSavedCsv(file);
+    expect(res.ok).toBe(true);
+    expect(res.rows[0].product).toBe('전체');
+    expect(res.rows[0].margin).toBeNull();
+  });
+
+  it('값에 쉼표가 있어도(따옴표로 감싸진 값) 정확히 되돌린다', async () => {
+    const { parseSavedCsv } = await import('../importSavedCsv.js');
+    const csv = buildCsv([row({ product: '린넨셔츠, 화이트' })], { platforms: PLATFORMS, showProduct: true, showRoi: false });
+    const file = new File(['﻿' + csv], 'x.csv', { type: 'text/csv' });
+    const res = await parseSavedCsv(file);
+    expect(res.rows[0].product).toBe('린넨셔츠, 화이트');
+  });
+
+  it('우리 형식이 아닌 CSV(네이버 리포트 등)를 올리면 한국어로 거부한다', async () => {
+    const { parseSavedCsv } = await import('../importSavedCsv.js');
+    const file = new File(['날짜,캠페인,광고그룹\n2026-01-01,x,y'], 'naver.csv', { type: 'text/csv' });
+    const res = await parseSavedCsv(file);
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('없는 컬럼');
+  });
+});

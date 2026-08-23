@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { isConfigured } from './firebase.js';
 import { fetchUpload } from './lib/uploadFirestore.js';
+import { parseSavedCsv } from './lib/importSavedCsv.js';
 import { derivePlatforms } from './lib/platforms.js';
 import { withMetrics, deriveWeeks, aggregate, byPlatform, byProduct, trendByPlatform, trendDirection, funnelDiagnosis, PLATFORMS, platformInfo } from './lib/metrics.js';
 import { buildCsv, buildFileName, downloadCsv } from './lib/exportCsv.js';
@@ -127,6 +128,23 @@ export default function App() {
     }
   };
 
+  // "CSV로 내려받기"로 저장해둔 파일을 다시 올리면, 서버에 새로 올리지 않고 샘플을
+  // 볼 때와 같은 방식으로 브라우저 안에서 바로 화면을 복원한다 — 매칭·마진 입력을
+  // 다시 할 필요가 없다(그 정보가 이미 파일 안에 들어있다).
+  const importSavedCsv = async (file) => {
+    setLoadingSample(true);
+    try {
+      const res = await parseSavedCsv(file);
+      if (!res.ok) {
+        dispatchDataset({ type: 'empty', notice: res.error });
+        return;
+      }
+      dispatchDataset({ type: 'loaded', status: 'imported', rows: res.rows, platforms: derivePlatforms(res.rows) });
+    } finally {
+      setLoadingSample(false);
+    }
+  };
+
   const handleUploaded = (uploadedRows, uploadedPlatforms) => {
     dispatchDataset({ type: 'loaded', status: 'upload', rows: uploadedRows, platforms: uploadedPlatforms });
     reset();
@@ -205,6 +223,23 @@ export default function App() {
               {loadingSample ? '불러오는 중…' : '샘플 데이터로 둘러보기'}
             </button>
             {' '}— 가상의 스킨케어 브랜드가 4개 채널에 90일간 광고한 데이터입니다.
+            <br />
+            전에 이 화면에서{' '}
+            <label className="linklike">
+              CSV로 내려받아둔 파일이 있다면 그 파일 불러오기
+              <input
+                type="file"
+                accept=".csv"
+                hidden
+                disabled={loadingSample}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) importSavedCsv(file);
+                }}
+              />
+            </label>
+            {' '}— 서버에 다시 올리지 않고 그 자리에서 바로 복원됩니다. 캠페인 매칭·마진 입력을 다시 할 필요가 없습니다.
           </p>
           {uploadNotice && <p className="upload-error">{uploadNotice}</p>}
         </section>

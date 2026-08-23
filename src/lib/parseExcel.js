@@ -11,7 +11,7 @@ const NUMERIC_FIELDS = ['impressions', 'clicks', 'adSpend', 'conversions', 'reve
 // 실패한 약속(promise)을 그대로 남겨두면 새로고침 전까지 계속 같은 실패가 재사용되므로,
 // 실패하면 비워서 다음 시도에 다시 받아오게 한다.
 let xlsxPromise = null;
-function loadXlsx() {
+export function loadXlsx() {
   if (!xlsxPromise) {
     xlsxPromise = import('xlsx').catch((e) => {
       xlsxPromise = null;
@@ -26,13 +26,13 @@ function fail(error) {
 }
 
 // "1,234" 같은 천단위 콤마·공백을 제거하고 숫자로 바꾼다. 실제 리포트 내보내기 형식을 대비.
-function toNumber(raw) {
+export function toNumber(raw) {
   if (typeof raw === 'number') return raw;
   const cleaned = String(raw ?? '').replace(/,/g, '').trim();
   return cleaned === '' ? NaN : Number(cleaned);
 }
 
-function toIsoDate(raw) {
+export function toIsoDate(raw) {
   const d = raw instanceof Date ? raw : new Date(String(raw).trim());
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);

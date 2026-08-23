@@ -86,6 +86,7 @@ npm run dev
 | `src/lib/metrics.js` | CTR·전환율·ROAS·ROI 계산, 플랫폼별/제품별 합계 |
 | `src/lib/platforms.js` | 플랫폼 리포트의 네이티브 컬럼명 매핑, 업로드 데이터의 플랫폼 목록 자동 인식 |
 | `src/lib/parseExcel.js` | 플랫폼 리포트 파일(.xlsx/.csv)을 읽어 표준 행으로 변환 |
+| `src/lib/importSavedCsv.js` | "CSV로 내려받기"가 만든 파일을 다시 읽어 화면을 복원 (서버 안 씀) |
 | `src/lib/useDashboardState.js` | **조회 조건(채널·제품·기간·정렬)을 모아 관리하고 주소창과 동기화** |
 | `src/lib/sort.js` | 표 정렬 |
 | `src/App.jsx` | 전체 화면 조립, 날짜→주차 변환, 조건을 한 번만 적용해 각 화면에 전달 |
