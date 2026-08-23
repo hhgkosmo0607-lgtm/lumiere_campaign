@@ -224,9 +224,9 @@ export default function App() {
             </button>
             {' '}— 가상의 스킨케어 브랜드가 4개 채널에 90일간 광고한 데이터입니다.
             <br />
-            전에 이 화면에서{' '}
+            전에 이 화면에서 CSV로 내려받아둔 파일이 있다면{' '}
             <label className="linklike">
-              CSV로 내려받아둔 파일이 있다면 그 파일 불러오기
+              그 파일 불러오기
               <input
                 type="file"
                 accept=".csv"
