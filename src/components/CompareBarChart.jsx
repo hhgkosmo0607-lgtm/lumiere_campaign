@@ -1,4 +1,5 @@
-import { pct } from '../lib/metrics';
+import PropTypes from 'prop-types';
+import { pct } from '../lib/metrics.js';
 
 const LOSS_COLOR = '#c0392b';
 
@@ -105,3 +106,16 @@ export default function CompareBarChart({ data, metric = 'roas', breakevenValue 
     </svg>
   );
 }
+
+CompareBarChart.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    name: PropTypes.string.isRequired,
+    color: PropTypes.string.isRequired,
+    desc: PropTypes.string,
+    roas: PropTypes.number,
+    roi: PropTypes.number,
+  })).isRequired,
+  metric: PropTypes.oneOf(['roas', 'roi']),
+  breakevenValue: PropTypes.number,
+};

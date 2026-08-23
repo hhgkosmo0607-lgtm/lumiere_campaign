@@ -1,5 +1,12 @@
-import { won, pct } from '../lib/metrics';
+import PropTypes from 'prop-types';
+import { won, pct } from '../lib/metrics.js';
 
+/**
+ * 화면 맨 위 카드 3장(총 광고비, ROAS, 전환율). 계산은 하나도 안 하고, App.jsx가 이미
+ * aggregate()로 다 계산해서 넘겨준 totals 값을 그대로 화면에 찍기만 한다 — 이 컴포넌트가
+ * "표시 전용"이라는 걸 보여주는 가장 단순한 예다. won()·pct()는 metrics.js의 표시 형식
+ * 함수로, 숫자를 "1,234,567" "12.3%" 같은 사람이 읽기 좋은 글자로 바꿔준다.
+ */
 export default function SummaryCards({ totals }) {
   return (
     <div className="cards">
@@ -42,3 +49,13 @@ export default function SummaryCards({ totals }) {
     </div>
   );
 }
+
+SummaryCards.propTypes = {
+  totals: PropTypes.shape({
+    adSpend: PropTypes.number.isRequired,
+    revenue: PropTypes.number.isRequired,
+    roas: PropTypes.number.isRequired,
+    cvr: PropTypes.number.isRequired,
+    cac: PropTypes.number.isRequired,
+  }).isRequired,
+};

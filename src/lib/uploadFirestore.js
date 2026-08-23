@@ -6,7 +6,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
-import { app, db, isConfigured } from '../firebase';
+import { app, db, isConfigured } from '../firebase.js';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 

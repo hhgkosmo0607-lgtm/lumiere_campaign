@@ -1,4 +1,4 @@
-import { PLATFORM_COLUMNS } from './platforms';
+import { PLATFORM_COLUMNS } from './platforms.js';
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2MB
 const MAX_ROWS = 2000;

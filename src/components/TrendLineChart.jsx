@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { pct } from '../lib/metrics';
+import PropTypes from 'prop-types';
+import { pct } from '../lib/metrics.js';
 
 /**
  * 채널/제품별 주차 추이 선그래프.
@@ -31,6 +32,9 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
   const maxVal = rawMax + span * 0.08;
   const minVal = rawMin - (rawMin < 0 ? span * 0.08 : 0);
 
+  // x(주차)·y(값) — "이 주차, 이 ROAS 값"을 화면의 실제 픽셀 좌표로 바꾸는 함수.
+  // SVG는 왼쪽 위가 (0,0)이고 아래로 갈수록 y가 커지는 좌표계다. 그래서 "값이 클수록
+  // 위로" 그리려면 y 계산식에서 값을 뺄셈으로 뒤집어야 한다(plotH에서 비율만큼 빼는 이유).
   const x = (w) =>
     weeks.length === 1
       ? padL + plotW / 2
@@ -175,3 +179,19 @@ export default function TrendLineChart({ weeks, series, metric = 'roas', breakev
     </svg>
   );
 }
+
+TrendLineChart.propTypes = {
+  weeks: PropTypes.arrayOf(PropTypes.number).isRequired,
+  series: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    color: PropTypes.string.isRequired,
+    points: PropTypes.arrayOf(PropTypes.shape({
+      week: PropTypes.number.isRequired,
+      roas: PropTypes.number,
+      roi: PropTypes.number,
+    })).isRequired,
+  })).isRequired,
+  metric: PropTypes.oneOf(['roas', 'roi']),
+  breakevenValue: PropTypes.number,
+};

@@ -1,4 +1,4 @@
-import { PLATFORMS } from './metrics';
+import { PLATFORMS } from './metrics.js';
 
 // 어떤 출처의 데이터든(Firestore, 샘플, 업로드) PLATFORMS에 없는 플랫폼이 섞여 있을 수 있다.
 // 기존 플랫폼과 id가 겹치면 브랜드 색을 그대로 쓰고, 새 플랫폼이면 이 팔레트에서 순서대로 배정한다.

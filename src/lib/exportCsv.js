@@ -6,7 +6,7 @@
  * 같은 이유로 CTR·ROAS는 "2.55%"가 아니라 0.0255처럼 계산 가능한 숫자로 넣는다
  * (엑셀에서 백분율 서식만 씌우면 화면과 같은 값이 된다).
  */
-import { platformInfo } from './metrics';
+import { platformInfo } from './metrics.js';
 
 // 값에 쉼표·따옴표·줄바꿈이 들어 있으면 따옴표로 감싸고, 안쪽 따옴표는 두 번 겹쳐 쓴다.
 function cell(v) {

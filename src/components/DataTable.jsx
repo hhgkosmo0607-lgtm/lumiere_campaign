@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { platformInfo, won, pct } from '../lib/metrics';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
+import { platformInfo, won, pct } from '../lib/metrics.js';
 
 const PAGE_SIZE = 50;
 
@@ -41,7 +42,15 @@ export default function DataTable({ rows, platforms, products, showRoi, sortKey,
 
   const [page, setPage] = useState(0);
   // 조건이 바뀌어 행 목록 자체가 달라지면 이전 페이지 번호는 의미가 없어진다.
-  useEffect(() => setPage(0), [rows]);
+  // useEffect(() => setPage(0), [rows])로 짜면 "먼저 옛 페이지로 한 번 그리고, 그 다음에
+  // effect가 실행돼 0페이지로 다시 그리는" 화면 깜빡임(불필요한 리렌더링 한 번)이 생긴다.
+  // 대신 "렌더링 도중에 이전 값과 비교해서 즉시 조정하는" 방식(React 공식 문서가 권장하는
+  // 패턴)을 쓰면, 화면에 옛 페이지가 잠깐이라도 그려지지 않고 바로 0페이지로 그려진다.
+  const [prevRows, setPrevRows] = useState(rows);
+  if (rows !== prevRows) {
+    setPrevRows(rows);
+    setPage(0);
+  }
 
   // rows가 비면 App.jsx가 이 컴포넌트 자체를 안 그린다 (필터링은 App.jsx에서 한 번만 한다는 원칙).
   const pageCount = Math.ceil(rows.length / PAGE_SIZE);
@@ -99,6 +108,10 @@ export default function DataTable({ rows, platforms, products, showRoi, sortKey,
                 <td className="num">{won(r.cpc)}</td>
                 <td className="num">{pct(r.cvr, 2)}%</td>
                 <td className={`num ${r.roas >= 1 ? 'pos' : 'neg'}`}>{pct(r.roas, 0)}%</td>
+                {/* <>...</>는 Fragment라 부른다. React는 컴포넌트가 태그 하나만 돌려주길
+                    기대하는데, <td> 두 개를 감쌀 <div> 같은 걸 넣으면 표(<table>) 구조가
+                    깨진다(불필요한 태그가 <tr> 안에 끼어든다). Fragment는 "화면엔 아무
+                    흔적도 안 남기면서 여러 요소를 하나로 묶어주는" 투명한 포장지다. */}
                 {showRoi && (
                   <>
                     <td className={`num ${r.profit >= 0 ? 'pos' : 'neg'}`}>{won(r.profit)}</td>
@@ -137,3 +150,17 @@ export default function DataTable({ rows, platforms, products, showRoi, sortKey,
     </div>
   );
 }
+
+DataTable.propTypes = {
+  rows: PropTypes.arrayOf(PropTypes.object).isRequired,
+  platforms: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    color: PropTypes.string.isRequired,
+  })).isRequired,
+  products: PropTypes.arrayOf(PropTypes.string).isRequired,
+  showRoi: PropTypes.bool.isRequired,
+  sortKey: PropTypes.string.isRequired,
+  sortDir: PropTypes.oneOf(['asc', 'desc']).isRequired,
+  onSort: PropTypes.func.isRequired,
+};

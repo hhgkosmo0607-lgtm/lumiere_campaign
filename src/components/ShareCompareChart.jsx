@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 /**
  * 채널/제품별 "광고비 비중"과 "매출 비중"을 나란히 비교하는 막대.
  * "이 채널이 예산의 X%를 쓰는데 매출은 Y%만 낸다"를 문장이 아니라 눈으로 보게 한다.
@@ -7,6 +9,9 @@
 export default function ShareCompareChart({ data }) {
   const totalSpend = data.reduce((a, d) => a + d.adSpend, 0);
   const totalRevenue = data.reduce((a, d) => a + d.revenue, 0);
+  // 광고비나 매출 합계가 0이면(예: 아직 아무 조건도 안 걸렸는데 데이터 자체가 없는 극단적
+  // 상황) 비중(%) 계산이 0으로 나누기가 돼버린다. 그릴 게 없으니 아무것도 그리지 않는다 —
+  // null을 return하면 React는 이 컴포넌트를 화면에서 그냥 건너뛴다(빈 칸도 안 남는다).
   if (!totalSpend || !totalRevenue) return null;
 
   const W = 420;
@@ -70,3 +75,13 @@ export default function ShareCompareChart({ data }) {
     </svg>
   );
 }
+
+ShareCompareChart.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    name: PropTypes.string.isRequired,
+    color: PropTypes.string.isRequired,
+    adSpend: PropTypes.number.isRequired,
+    revenue: PropTypes.number.isRequired,
+  })).isRequired,
+};
