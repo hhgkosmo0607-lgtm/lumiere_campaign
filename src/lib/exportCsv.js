@@ -53,7 +53,11 @@ export function buildFileName({ platform, product, from, to, platforms }) {
   if (platform && platform !== 'all') parts.push(platformInfo(platform, platforms).name);
   if (product && product !== 'all') parts.push(product);
   parts.push(`${from}-${to}주`);
-  parts.push(new Date().toISOString().slice(0, 10));
+  // 오늘 날짜는 쓰는 사람이 사는 지역 기준이어야 한다. toISOString()은 UTC로 바꿔버려서
+  // 한국(UTC+9)의 새벽 0~9시에 내려받으면 파일명만 전날로 찍힌다.
+  const now = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  parts.push(`${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`);
   // 파일명에 쓸 수 없는 문자를 걷어낸다
   return `${parts.join('_').replace(/[\\/:*?"<>|]/g, '')}.csv`;
 }

@@ -32,10 +32,38 @@ export function toNumber(raw) {
   return cleaned === '' ? NaN : Number(cleaned);
 }
 
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// Date 객체에서 연·월·일을 '로컬 시간 기준'으로 읽는다. toISOString()을 쓰면 UTC로
+// 환산되는데, xlsx는 엑셀의 날짜 셀을 로컬 자정 Date로 돌려주므로 한국(UTC+9)에서는
+// 자정이 전날 15시로 바뀌어 날짜가 하루씩 밀린다.
+const localIso = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
 export function toIsoDate(raw) {
-  const d = raw instanceof Date ? raw : new Date(String(raw).trim());
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
+  // 엑셀의 진짜 날짜 셀(일련번호+날짜서식)은 xlsx가 Date 객체로 바꿔서 준다.
+  if (raw instanceof Date) {
+    return Number.isNaN(raw.getTime()) ? null : localIso(raw);
+  }
+
+  const s = String(raw ?? '').trim();
+
+  // 이미 YYYY-MM-DD 형태면 Date를 거치지 않고 그대로 쓴다 — new Date('2026-05-01')은
+  // UTC 자정으로 해석돼서, 시간대에 따라 앞뒤로 하루가 밀릴 수 있기 때문이다.
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const [, y, mo, d] = m;
+    // 2026-13-45처럼 형태만 맞고 실제로는 없는 날짜를 걸러낸다.
+    const probe = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d)));
+    if (probe.getUTCFullYear() !== Number(y)
+      || probe.getUTCMonth() !== Number(mo) - 1
+      || probe.getUTCDate() !== Number(d)) return null;
+    return `${y}-${mo}-${d}`;
+  }
+
+  // 그 밖의 형식("2026/05/01" 등)은 브라우저 파서에 맡긴다. 이런 형식은 로컬 자정으로
+  // 해석되므로 여기서도 로컬 기준으로 읽어야 날짜가 안 밀린다.
+  const parsed = new Date(s);
+  return Number.isNaN(parsed.getTime()) ? null : localIso(parsed);
 }
 
 // 플랫폼 리포트 파일(.xlsx/.csv)을 읽어 표준 행 배열로 바꾼다.
