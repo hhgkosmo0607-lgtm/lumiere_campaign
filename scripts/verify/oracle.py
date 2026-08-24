@@ -9,6 +9,11 @@ import zipfile, sys, json, datetime
 from xml.etree import ElementTree as ET
 from pathlib import Path
 
+# 윈도우 콘솔의 기본 코드페이지(cp949 등)로 표준출력이 열리면 print()가 한글을 그 코드페이지로
+# 인코딩해버린다. scripts/verify.mjs는 이 출력을 항상 UTF-8로 디코드하므로, 여기서 미리 표준출력을
+# UTF-8로 고정해두지 않으면 제품명 같은 한글 값이 깨져서(모지바케) 넘어간다.
+sys.stdout.reconfigure(encoding='utf-8')
+
 NS = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
 
 # 각 플랫폼 리포트의 컬럼 이름 → 뜻. 문서를 보고 사람이 직접 적은 것으로,

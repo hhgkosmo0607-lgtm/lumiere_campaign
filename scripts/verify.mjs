@@ -13,14 +13,18 @@
 import { execFileSync } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { parsePlatformFile } = await import(`${ROOT}/src/lib/parseExcel.js`);
-const { derivePlatforms } = await import(`${ROOT}/src/lib/platforms.js`);
-const M = await import(`${ROOT}/src/lib/metrics.js`);
-const { buildCsv } = await import(`${ROOT}/src/lib/exportCsv.js`);
-const { sortRows } = await import(`${ROOT}/src/lib/sort.js`);
+// 동적 import()는 절대경로 문자열을 그대로 받으면 안 된다 — 윈도우에서는 드라이브 문자(c:)를
+// URL 스킴으로 오해해서 ERR_UNSUPPORTED_ESM_URL_SCHEME로 터진다. pathToFileURL로 감싸면
+// 맥·리눅스·윈도우 어디서 실행해도 똑같이 동작한다.
+const importFrom = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
+const { parsePlatformFile } = await importFrom('src/lib/parseExcel.js');
+const { derivePlatforms } = await importFrom('src/lib/platforms.js');
+const M = await importFrom('src/lib/metrics.js');
+const { buildCsv } = await importFrom('src/lib/exportCsv.js');
+const { sortRows } = await importFrom('src/lib/sort.js');
 
 let problems = 0;
 const fail = (msg) => { problems += 1; console.log(`   ✗ ${msg}`); };
@@ -56,11 +60,32 @@ if (folders.length === 0) {
 const KEYS = ['adSpend', 'revenue', 'impressions', 'clicks', 'conversions',
               'ctr', 'cvr', 'cpc', 'roas', 'profit', 'roi', 'breakevenRoas'];
 
+// 'python3' 명령이 없는 환경이 있다(윈도우 일부 설치는 'python'만 있거나, 파이썬을 실제로
+// 설치하지 않았는데도 스토어로 리다이렉트하는 가짜 'python3'가 PATH에 잡혀 있기도 하다).
+// 한 번 성공한 명령을 기억해두고 그다음 폴더부터는 바로 그걸로 실행한다.
+let pythonCmd = null;
+function runOracle(args) {
+  const candidates = pythonCmd ? [pythonCmd] : ['python3', 'python'];
+  for (const cmd of candidates) {
+    try {
+      // stderr까지 파이프로 받는다 — 기본값은 부모의 stderr로 그대로 흘려보내는 것이라,
+      // 실패한 후보(가짜 python3 등)가 뱉는 문구가 검사 결과 화면에 섞여 나온다.
+      const out = execFileSync(cmd, args, {
+        encoding: 'utf-8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      pythonCmd = cmd;
+      return out;
+    } catch (e) {
+      if (cmd === candidates[candidates.length - 1]) throw e; // 마지막 후보까지 실패하면 알린다
+    }
+  }
+  return ''; // 여기 도달할 수 없다 (위에서 반환하거나 throw한다)
+}
+
 for (const folder of folders) {
   const dir = path.join(ROOT, 'scripts/native', folder);
   const { rows, files } = await loadFolder(dir);
-  const truth = JSON.parse(execFileSync('python3',
-    [path.join(ROOT, 'scripts/verify/oracle.py'), dir, '{}'], { encoding: 'utf-8', maxBuffer: 1 << 26 }));
+  const truth = JSON.parse(runOracle([path.join(ROOT, 'scripts/verify/oracle.py'), dir, '{}']));
 
   const platforms = derivePlatforms(rows);
   const products = [...new Set(rows.map((r) => r.product))];
