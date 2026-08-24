@@ -12,7 +12,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob
 1. `src/index.css` 전체를 `<style>` 안에 그대로 넣어줘
 2. `src/lib/metrics.js`, `src/lib/sort.js`, `src/lib/useDashboardState.js` 의 로직을 순수 JS로 옮겨줘
 3. 각 컴포넌트가 만드는 마크업을 템플릿 문자열로 옮겨줘
-4. 데이터는 `campaigns.json` 내용을 `RAW` 상수로 박아줘
+4. 데이터는 `src/sample-data.json`(기본 데모, 90일×4채널×5제품) 내용을 `RAW` 상수로 박아줘 — `scripts/campaigns.json`은 `npm run seed`용으로 남겨둔 옛 파일이라 쓰지 않는다
 
 지켜야 할 것:
 

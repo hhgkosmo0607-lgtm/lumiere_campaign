@@ -3,7 +3,18 @@
 React + Firebase로 만든, 여러 광고 플랫폼의 성과를 한 화면에서 비교하는 통합 대시보드입니다.
 아래 순서대로 따라 하면 됩니다. Firebase 계정 만드는 것만 직접 하시면 되고, 나머지는 명령어 복사해서 붙여넣으면 됩니다.
 
-데이터 구조·계산식·흐름도를 코드 없이 한눈에 보려면 [사양서.md](사양서.md), 무엇을 왜/누구를 위해/어디까지 만들었는지는 [PRD.md](PRD.md)를 참고하세요.
+## 문서 안내
+
+| 문서 | 용도 |
+|---|---|
+| `README.md` | 이 문서 — Firebase 설정·실행·배포 절차 |
+| `PRD.md` | 무엇을 왜/누구를 위해/어디까지 만들었는지 |
+| `사양서.md` | 데이터 구조·계산식·흐름도를 코드 없이 한눈에 |
+| `학습노트.md` | 코드를 왜 이렇게 짰는지 — 면접 준비용 깊은 설명 |
+| `포트폴리오_설명.md` | 포트폴리오에 붙일 1페이지 서술 |
+| `CLAUDE.md` | Claude Code가 매 세션 읽는 프로젝트 규칙 |
+| `CLAUDE_CODE_가이드.md` | Claude Code로 이어서 작업하는 법 — 명령어·프롬프트 모음 |
+| `preview.html` | 설치 없이 더블클릭으로 여는 미리보기 |
 
 ---
 
@@ -82,16 +93,17 @@ npm run dev
 
 | 파일 | 역할 |
 |---|---|
-| `src/firebase.js` | Firebase 연결, Firestore에서 데이터 가져오기 |
+| `src/firebase.js` | Firebase 앱·Firestore 초기화만 함 — `campaigns` 컬렉션을 읽는 코드는 없음(비용 문제로 제거) |
 | `src/lib/metrics.js` | CTR·전환율·ROAS·ROI 계산, 플랫폼별/제품별 합계 |
 | `src/lib/platforms.js` | 플랫폼 리포트의 네이티브 컬럼명 매핑, 업로드 데이터의 플랫폼 목록 자동 인식 |
 | `src/lib/parseExcel.js` | 플랫폼 리포트 파일(.xlsx/.csv)을 읽어 표준 행으로 변환 |
 | `src/lib/importSavedCsv.js` | "CSV로 내려받기"가 만든 파일을 다시 읽어 화면을 복원 (서버 안 씀) |
+| `src/lib/useUploadBatch.js` | 업로드 화면의 상태·로직 전체 — 파일 대기열 → 캠페인-제품 매칭 → 마진율 입력 → 업로드 |
 | `src/lib/useDashboardState.js` | **조회 조건(채널·제품·기간·정렬)을 모아 관리하고 주소창과 동기화** |
 | `src/lib/sort.js` | 표 정렬 |
 | `src/App.jsx` | 전체 화면 조립, 날짜→주차 변환, 조건을 한 번만 적용해 각 화면에 전달 |
 | `src/components/Controls.jsx` | 채널·제품 선택 · 기간 슬라이더 · 링크 복사 · 초기화 |
-| `src/components/UploadPanel.jsx` | 플랫폼별 리포트 파일을 여러 개 추가해 하나의 데이터셋으로 합치는 업로드 화면 |
+| `src/components/UploadPanel.jsx` | `useUploadBatch.js`와 `components/upload/*` 화면 4개(파일 선택/매칭/마진율/완료)를 조립하는 얇은 조율자 |
 | `src/components/SummaryCards.jsx` | 상단 요약 카드 3개 |
 | `src/components/CompareBarChart.jsx` | 채널별/제품별 ROAS·ROI 비교 막대 그래프 (범용) |
 | `src/components/TrendLineChart.jsx` | 주차별 ROAS·ROI 추이 선 그래프 |
@@ -305,7 +317,6 @@ npm run samples
 | 증상 | 원인 / 해결 |
 |---|---|
 | `npm run seed` 에서 `permission-denied` | Firestore 규칙이 쓰기를 막고 있음. 테스트 모드인지 확인 |
-| 화면은 뜨는데 데이터가 비어 있음 | 컬렉션 이름이 `campaigns` 가 맞는지 확인 |
 | 업로드 시 "없는 컬럼" 에러 | 선택한 플랫폼과 실제 파일이 다르거나(예: 네이버 선택했는데 구글 파일), 리포트 다운로드 옵션에서 일부 컬럼을 뺐을 수 있음 |
 | 업로드 시 "날짜 값을 읽을 수 없습니다" | 날짜 컬럼 형식이 예상과 다름. YYYY-MM-DD 형태를 기준으로 만들었음 |
 | 한글이 깨짐 | 브라우저가 폰트를 못 불러온 경우. 인터넷 연결 확인 |

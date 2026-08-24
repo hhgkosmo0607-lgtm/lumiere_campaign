@@ -113,7 +113,7 @@ export default function App() {
     return () => { alive = false; };
   }, [datasetId]);
 
-  // 샘플 데이터(약 290KB)는 "둘러보기"를 누른 사람만 받아간다.
+  // 샘플 데이터(빌드 후 약 240KB의 별도 파일)는 "둘러보기"를 누른 사람만 받아간다.
   const showSample = async () => {
     setLoadingSample(true);
     try {
