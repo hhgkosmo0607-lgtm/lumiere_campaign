@@ -5,3 +5,5 @@ dist
 
 # 샘플 리포트 파일 — npm run samples 로 언제든 다시 만든다
 scripts/native/
+
+.claude/
