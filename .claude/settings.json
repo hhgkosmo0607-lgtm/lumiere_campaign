@@ -3,8 +3,7 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(node -e ' *)",
-      "Bash(npm run *)",
-      "Bash(node gen-demo.mjs ./demo-data.json)"
+      "Bash(npm run *)"
     ]
   }
 }
