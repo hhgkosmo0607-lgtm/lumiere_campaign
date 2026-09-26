@@ -91,10 +91,16 @@ export default function App() {
     let alive = true;
     (async () => {
       // 공유 링크(?d=...)로 들어온 경우에만 서버에서 데이터를 받아온다.
-      // 그 외에는 아무것도 불러오지 않고 빈 화면에서 시작한다 — 사용자가 자기 리포트를
-      // 올리는 게 이 도구의 출발점이고, 쓰지도 않을 데이터를 매번 받아올 이유가 없다.
+      // 그 외에는 샘플 데이터로 바로 시작한다 — 포트폴리오로 보여주는 화면이라, 들어오자마자
+      // 채워진 대시보드가 보여야 한다. 자기 리포트는 대시보드 안의 업로드 패널로 올린다.
       if (!datasetId) {
-        if (alive) dispatchDataset({ type: 'empty' });
+        try {
+          const rows = (await import('./sample-data.json')).default;
+          if (alive) dispatchDataset({ type: 'loaded', status: 'sample', rows, platforms: derivePlatforms(rows) });
+        } catch (e) {
+          console.error(e);
+          if (alive) dispatchDataset({ type: 'empty', notice: '샘플 데이터를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.' });
+        }
         return;
       }
       try {

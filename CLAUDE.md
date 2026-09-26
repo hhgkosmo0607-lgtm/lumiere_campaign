@@ -48,7 +48,7 @@ npm run seed     # scripts/campaigns.json 을 Firestore에 올린다 (지금은 
 
 기본 데모는 `src/sample-data.json`(90일 × 4채널 × 5제품, 1,800행) 하나다. **앱은 Firestore의 `campaigns` 컬렉션을 읽지 않는다** — 문서 1,800개를 매번 읽으면 페이지 한 번 열 때 읽기가 1,800회 발생해서, 같은 데이터를 앱 안에 두는 쪽으로 바꿨다(`fetchCampaigns()`는 제거했다). `scripts/seed.js`와 `npm run seed`는 그대로 남겨뒀다 — 다시 서버에서 읽고 싶어지면 되살릴 수 있게.
 
-**첫 화면에는 아무 데이터도 안 뜬다.** 사용자가 자기 리포트를 올리는 데서 시작하는 도구라, 남의 데모 데이터를 미리 채워두지 않는다. "샘플 데이터로 둘러보기"를 누르면 그때 `sample-data.json`을 받아온다(약 240KB, 별도 파일로 분리돼 있다). 공유 링크(`?d=...`)로 들어오면 그 데이터를 바로 보여준다.
+**첫 화면은 샘플 데이터로 채워진 대시보드다.** 포트폴리오로 보여주는 화면이라 들어오자마자 결과가 보이도록, 공유 링크가 없으면 `sample-data.json`(약 240KB, 별도 파일로 분리돼 있다)을 바로 불러온다. 자기 리포트는 대시보드 안의 업로드 패널로 올린다. 공유 링크(`?d=...`)로 들어오면 그 데이터를 바로 보여준다. 빈 안내 화면(랜딩)은 샘플·공유 데이터를 불러오지 못했을 때만 나온다.
 
 ```
 date, platform, product, adSpend, impressions, clicks, conversions, revenue, margin
@@ -161,4 +161,4 @@ date, platform, product, adSpend, impressions, clicks, conversions, revenue, mar
 
 `npm run build` 가 통과하는지 확인한다. 화면을 바꿨다면 채널 필터와 기간 슬라이더를 조합해 숫자가 어긋나지 않는지 확인한다.
 
-`preview.html` 은 React 앱과 같은 화면을 npm 설치 없이 보여주는 미리보기다. **UI를 바꾸면 이 파일도 함께 갱신한다.** 기본 데모 자체에 `margin`·`product`가 있어서(위 "데이터" 참고) 표 페이지네이션·ROAS↔ROI 전환·제품별 비교 패널·이익/ROI 표 컬럼이 preview.html에서도 실제로 켜진다 — React 쪽 계산식(`metrics.js`의 `withMetrics`/`aggregate`/`byProduct`, `CompareBarChart`/`TrendLineChart`의 음수 처리)을 그대로 vanilla JS로 옮겨서 반영한다. 예외가 두 가지 있다. 하나는 업로드 기능(Firestore 쓰기·익명 인증이 필요) — preview.html은 어떤 방식으로도 데이터를 쓰지 않는 정적 미리보기로 유지한다. 다른 하나는 첫 화면인데, React 앱은 빈 화면에서 시작하지만 **preview.html은 샘플 데이터가 채워진 대시보드를 바로 보여준다** — 설치 없이 결과물을 보여주는 게 이 파일의 목적이라 빈 화면으로 열리면 아무 쓸모가 없기 때문이다. 계산·표시 로직은 여전히 양쪽이 같아야 하고, `npm run verify`가 그걸 대조한다.
+`preview.html` 은 React 앱과 같은 화면을 npm 설치 없이 보여주는 미리보기다. **UI를 바꾸면 이 파일도 함께 갱신한다.** 기본 데모 자체에 `margin`·`product`가 있어서(위 "데이터" 참고) 표 페이지네이션·ROAS↔ROI 전환·제품별 비교 패널·이익/ROI 표 컬럼이 preview.html에서도 실제로 켜진다 — React 쪽 계산식(`metrics.js`의 `withMetrics`/`aggregate`/`byProduct`, `CompareBarChart`/`TrendLineChart`의 음수 처리)을 그대로 vanilla JS로 옮겨서 반영한다. 예외는 업로드 기능이다(Firestore 쓰기·익명 인증이 필요) — preview.html은 어떤 방식으로도 데이터를 쓰지 않는 정적 미리보기로 유지한다. 첫 화면은 React 앱과 preview.html 모두 샘플 데이터가 채워진 대시보드로 시작한다. 계산·표시 로직은 여전히 양쪽이 같아야 하고, `npm run verify`가 그걸 대조한다.
